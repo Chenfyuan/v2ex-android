@@ -14,8 +14,8 @@ android {
         applicationId = "com.tavi.v2ex"
         minSdk = 26
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.2.0"
+        versionCode = 5
+        versionName = "0.2.1"
     }
     val signProps = Properties().apply {
         System.getenv("V2EX_SIGNING_PROPERTIES")?.let { file(it) }?.takeIf { it.isFile }?.inputStream()?.use { load(it) }

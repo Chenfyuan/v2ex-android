@@ -377,7 +377,7 @@ fun SettingsScreen(nav: Navigator, entry: Entry) {
             cacheMsg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
             SectionTitle("关于")
-            Text("V2 阅读 0.2.0 · 非官方 V2EX 客户端，数据来自 V2EX 公开接口。", style = MaterialTheme.typography.bodySmall,
+            Text("V2 阅读 0.2.1 · 非官方 V2EX 客户端，数据来自 V2EX 公开接口。", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(32.dp))
         }

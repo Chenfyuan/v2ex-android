@@ -3,11 +3,8 @@ package com.tavi.v2ex
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import com.tavi.v2ex.ui.*
@@ -24,16 +21,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             AppTheme(app.prefs.themeMode, app.prefs.dynamicColor) {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    BackHandler(navigator.stack.size > 1) { navigator.pop() }
-                    AnimatedContent(
-                        targetState = navigator.current,
-                        transitionSpec = {
-                            val dir = if (navigator.forward) 1 else -1
-                            (slideInHorizontally(tween(260)) { it / 4 * dir } + fadeIn(tween(200))) togetherWith
-                                (slideOutHorizontally(tween(260)) { -it / 6 * dir } + fadeOut(tween(160)))
-                        },
-                        label = "nav",
-                    ) { e ->
+                    // 预测性返回：边缘滑动可预览上一页；对话框由系统优先处理
+                    PredictiveNavHost(navigator) { e ->
                         when (val r = e.route) {
                             Route.Home -> HomeScreen(navigator, e)
                             is Route.TopicR -> TopicScreen(navigator, e, r.id, r.preview, r.jumpFloor)
