@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
     id("io.github.takahirom.roborazzi")
 }
 
@@ -13,10 +14,9 @@ android {
         applicationId = "com.tavi.v2ex"
         minSdk = 26
         targetSdk = 37
-        versionCode = 3
-        versionName = "0.1.2"
+        versionCode = 4
+        versionName = "0.2.0"
     }
-    // 发布签名：V2EX_SIGNING_PROPERTIES 指定的文件；没有则 release 不签名
     val signProps = Properties().apply {
         System.getenv("V2EX_SIGNING_PROPERTIES")?.let { file(it) }?.takeIf { it.isFile }?.inputStream()?.use { load(it) }
     }
@@ -62,6 +62,9 @@ dependencies {
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
     implementation("org.jsoup:jsoup:1.21.2")
     implementation("dev.chrisbanes.haze:haze:1.6.0")
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")

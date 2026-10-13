@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -70,6 +71,7 @@ fun HomeScreen(nav: Navigator, entry: Entry) {
     val api = nav.api
     LaunchedEffect(Unit) {
         if (s.hot.data == null) entry.scope.load(s.hot) { api.hot() }
+        nav.refreshNoticeCount()
     }
     LaunchedEffect(s.pager.currentPage) {
         when (s.pager.currentPage) {
@@ -88,8 +90,10 @@ fun HomeScreen(nav: Navigator, entry: Entry) {
                         Text(titles.getOrElse(s.pager.currentPage) { "V2EX" }, fontWeight = FontWeight.SemiBold)
                     },
                     actions = {
+                        IconButton(onClick = { nav.push(Route.Search) }) { Icon(Icons.Outlined.Search, "搜索") }
+                        IconButton(onClick = { nav.push(Route.Library) }) { Icon(Icons.Outlined.Bookmarks, "收藏与历史") }
                         if (nav.prefs.token != null) IconButton(onClick = { nav.push(Route.Notices) }) {
-                            Icon(Icons.Outlined.Notifications, "提醒")
+                            BadgedIcon(nav.noticeCount) { Icon(Icons.Outlined.Notifications, "提醒") }
                         }
                         IconButton(onClick = { nav.push(Route.Settings) }) { Icon(Icons.Outlined.Settings, "设置") }
                     },
@@ -197,7 +201,8 @@ fun TopicListPane(
         data == null && l.error != null -> CenterMessage(l.error!!, "重试", onRetry)
         data == null -> Loading()
         else -> PullToRefreshBox(isRefreshing = l.refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
-            TopicList(data, state, onTopic = { nav.push(Route.TopicR(it.id, it)) }, onMember = { nav.push(Route.MemberR(it)) })
+            TopicList(data, state, onTopic = { nav.push(Route.TopicR(it.id, it)) }, onMember = { nav.push(Route.MemberR(it)) },
+                showThumb = nav.prefs.loadImages)
         }
     }
 }
@@ -206,6 +211,7 @@ fun TopicListPane(
 fun TopicList(
     topics: List<Topic>, state: LazyListState = LazyListState(),
     onTopic: (Topic) -> Unit, onMember: (String) -> Unit, showNode: Boolean = true,
+    showThumb: Boolean = false,
     header: (@Composable () -> Unit)? = null,
     bottomSpace: Boolean = true,
 ) {
@@ -216,7 +222,7 @@ fun TopicList(
     ) {
         if (header != null) item { header() }
         items(topics, key = { it.id }) { t ->
-            TopicRow(t, { onTopic(t) }, onMember, showNode)
+            TopicRow(t, { onTopic(t) }, onMember, showNode, showThumb)
             HorizontalDivider(Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
         }
         if (topics.isEmpty()) item { Box(Modifier.fillParentMaxHeight(0.6f)) { CenterMessage("这里还没有主题") } }

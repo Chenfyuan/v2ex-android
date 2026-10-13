@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.*
+import com.tavi.v2ex.data.LocalDao
 import com.tavi.v2ex.data.Prefs
 import com.tavi.v2ex.data.Topic
 import com.tavi.v2ex.data.V2exApi
@@ -12,11 +13,13 @@ import kotlinx.coroutines.*
 
 sealed interface Route {
     data object Home : Route
-    data class TopicR(val id: Long, val preview: Topic? = null) : Route
+    data class TopicR(val id: Long, val preview: Topic? = null, val jumpFloor: Int? = null) : Route
     data class NodeR(val name: String, val title: String = name) : Route
     data class MemberR(val name: String) : Route
     data object Notices : Route
     data object Settings : Route
+    data object Search : Route
+    data object Library : Route
     data class Image(val url: String) : Route
 }
 
@@ -45,16 +48,28 @@ fun <T> CoroutineScope.load(l: Loadable<T>, refresh: Boolean = false, block: sus
     }
 }
 
-class Navigator(val api: V2exApi, val prefs: Prefs, private val context: Context) {
+class Navigator(
+    val api: V2exApi,
+    val prefs: Prefs,
+    val dao: LocalDao,
+    private val context: Context,
+) {
     val stack = mutableStateListOf(Entry(Route.Home))
     val current get() = stack.last()
     var forward by mutableStateOf(true); private set
+    /** 提醒未读数（有令牌时轮询第一页数量） */
+    var noticeCount by mutableIntStateOf(0)
 
     fun push(r: Route) { forward = true; stack.add(Entry(r)) }
     fun pop() { if (stack.size > 1) { forward = false; stack.removeAt(stack.lastIndex).scope.cancel() } }
 
-    /** 站内链接在 App 里打开，其他交给浏览器 */
-    fun openUrl(url: String) {
+    fun openUrl(url: String, currentTopicId: Long? = null, onFloor: ((Int) -> Unit)? = null) {
+        // 同主题楼层锚点
+        if (currentTopicId != null && onFloor != null) {
+            Regex("""#reply(\d+)$""").find(url)?.let {
+                onFloor(it.groupValues[1].toInt()); return
+            }
+        }
         routeFor(url)?.let { push(it); return }
         openExternal(url)
     }
@@ -65,17 +80,43 @@ class Navigator(val api: V2exApi, val prefs: Prefs, private val context: Context
         } catch (_: ActivityNotFoundException) { }
     }
 
-    fun share(title: String, url: String) {
-        val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "$title\n$url")
-        context.startActivity(Intent.createChooser(i, "分享").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    fun share(title: String, url: String, node: String? = null, author: String? = null) {
+        val body = buildString {
+            append(title.trim())
+            append('\n')
+            if (!author.isNullOrBlank()) append("作者 @$author")
+            if (!node.isNullOrBlank()) {
+                if (!author.isNullOrBlank()) append(" · ")
+                append(node)
+            }
+            if (!author.isNullOrBlank() || !node.isNullOrBlank()) append('\n')
+            append(url)
+            append("\n— 来自 V2 阅读")
+        }
+        val i = Intent(Intent.ACTION_SEND).setType("text/plain")
+            .putExtra(Intent.EXTRA_SUBJECT, title)
+            .putExtra(Intent.EXTRA_TEXT, body)
+        context.startActivity(Intent.createChooser(i, "分享主题").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    fun refreshNoticeCount() {
+        if (prefs.token == null) { noticeCount = 0; return }
+        CoroutineScope(Dispatchers.Main.immediate).launch {
+            runCatching { api.notifications(1) }.onSuccess { noticeCount = it.size.coerceAtMost(99) }
+        }
     }
 
     companion object {
         private val host = Regex("^https?://(www\\.)?v2ex\\.com", RegexOption.IGNORE_CASE)
         fun routeFor(url: String): Route? {
             if (!host.containsMatchIn(url)) return null
-            val path = url.replace(host, "").substringBefore('?').substringBefore('#')
-            Regex("^/t/(\\d+)").find(path)?.let { return Route.TopicR(it.groupValues[1].toLong()) }
+            val raw = url.replace(host, "")
+            val path = raw.substringBefore('?').substringBefore('#')
+            val frag = raw.substringAfter('#', "")
+            Regex("^/t/(\\d+)").find(path)?.let {
+                val floor = Regex("^reply(\\d+)$").find(frag)?.groupValues?.get(1)?.toIntOrNull()
+                return Route.TopicR(it.groupValues[1].toLong(), jumpFloor = floor)
+            }
             Regex("^/(member|u)/([\\w-]+)").find(path)?.let { return Route.MemberR(it.groupValues[2]) }
             Regex("^/go/([\\w-]+)").find(path)?.let { return Route.NodeR(it.groupValues[1]) }
             return null

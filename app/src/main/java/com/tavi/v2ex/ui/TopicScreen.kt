@@ -1,5 +1,6 @@
 package com.tavi.v2ex.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,6 +9,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
@@ -18,36 +22,79 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.tavi.v2ex.data.Reply
 import com.tavi.v2ex.data.Topic
+import com.tavi.v2ex.data.toBookmark
+import com.tavi.v2ex.data.toHistory
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class TopicState(preview: Topic?) {
     val topic = Loadable<Topic>().apply { data = preview?.takeIf { it.contentHtml.isNotEmpty() || it.member != null } }
     val replies = Loadable<List<Reply>>()
     val list = LazyListState()
     var shown by mutableIntStateOf(PAGE)
+    var onlyOp by mutableStateOf(false)
+    var bookmarked by mutableStateOf(false)
+    var pendingFloor by mutableStateOf<Int?>(null)
     companion object { const val PAGE = 50 }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopicScreen(nav: Navigator, entry: Entry, id: Long, preview: Topic?) {
-    val s = entry.state("topic") { TopicState(preview) }
+fun TopicScreen(nav: Navigator, entry: Entry, id: Long, preview: Topic?, jumpFloor: Int?) {
+    val s = entry.state("topic") { TopicState(preview).also { if (jumpFloor != null) it.pendingFloor = jumpFloor } }
     val api = nav.api
+    val dao = nav.dao
+    val scope = rememberCoroutineScope()
     fun refresh(force: Boolean) {
-        entry.scope.load(s.topic, force) { api.topic(id, force) }
+        entry.scope.load(s.topic, force) {
+            api.topic(id, force).also { dao.upsertHistory(it.toHistory()) }
+        }
         entry.scope.load(s.replies) { api.replies(id, force) }
     }
-    LaunchedEffect(Unit) { if (s.replies.data == null) refresh(false) }
+    LaunchedEffect(Unit) {
+        if (s.replies.data == null) refresh(false)
+        dao.isTopicBookmarked(id).collectLatest { s.bookmarked = it }
+    }
+    // 跳楼：确保页数够，再滚到对应 item
+    LaunchedEffect(s.replies.data, s.pendingFloor, s.onlyOp) {
+        val floor = s.pendingFloor ?: return@LaunchedEffect
+        val all = s.replies.data ?: return@LaunchedEffect
+        val filtered = if (s.onlyOp) all.filter { it.member?.username == s.topic.data?.member?.username } else all
+        val idx = filtered.indexOfFirst { it.floor == floor }
+        if (idx < 0) { s.pendingFloor = null; return@LaunchedEffect }
+        while (s.shown <= idx + 1) s.shown += TopicState.PAGE
+        // head 占 1 个 item
+        s.list.animateScrollToItem(idx + 1)
+        s.pendingFloor = null
+    }
     val url = "https://www.v2ex.com/t/$id"
     val t = s.topic.data
+    val bodyStyle = readingBodyStyle(nav.prefs)
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(t?.node?.title ?: "主题", maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.clickable(enabled = t?.node != null) { t?.node?.let { nav.push(Route.NodeR(it.name, it.title)) } }) },
             navigationIcon = { IconButton(onClick = nav::pop) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
             actions = {
-                IconButton(onClick = { nav.share(t?.title ?: "", url) }) { Icon(Icons.Outlined.Share, "分享") }
+                IconButton(onClick = { s.onlyOp = !s.onlyOp }) {
+                    Icon(Icons.Outlined.FilterList, if (s.onlyOp) "显示全部回复" else "只看楼主",
+                        tint = if (s.onlyOp) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                }
+                IconButton(onClick = {
+                    scope.launch {
+                        val topic = s.topic.data ?: return@launch
+                        if (s.bookmarked) dao.removeTopic(id) else dao.saveTopic(topic.toBookmark())
+                    }
+                }) {
+                    Icon(if (s.bookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                        if (s.bookmarked) "取消收藏" else "收藏")
+                }
+                IconButton(onClick = { nav.share(t?.title ?: "", url, t?.node?.title, t?.member?.username) }) {
+                    Icon(Icons.Outlined.Share, "分享")
+                }
                 IconButton(onClick = { nav.openExternal(url) }) { Icon(Icons.Outlined.OpenInBrowser, "在浏览器打开") }
             },
         )
@@ -59,11 +106,14 @@ fun TopicScreen(nav: Navigator, entry: Entry, id: Long, preview: Topic?) {
                 else -> PullToRefreshBox(isRefreshing = s.topic.refreshing, onRefresh = { refresh(true) }) {
                     TopicDetail(
                         t, s.replies.data, s.replies.loading, s.replies.error, s.shown, s.list,
-                        loadImages = nav.prefs.loadImages,
+                        loadImages = nav.prefs.loadImages, onlyOp = s.onlyOp, bodyStyle = bodyStyle,
+                        mentionUser = nav.prefs.myUsername,
                         onMore = { s.shown += TopicState.PAGE },
                         onRetryReplies = { entry.scope.load(s.replies) { api.replies(id) } },
-                        onLink = nav::openUrl, onImage = { nav.push(Route.Image(it)) },
+                        onLink = { u -> nav.openUrl(u, id) { s.pendingFloor = it } },
+                        onImage = { nav.push(Route.Image(it)) },
                         onMember = { nav.push(Route.MemberR(it)) },
+                        onJumpFloor = { s.pendingFloor = it },
                     )
                 }
             }
@@ -72,19 +122,32 @@ fun TopicScreen(nav: Navigator, entry: Entry, id: Long, preview: Topic?) {
 }
 
 @Composable
+fun readingBodyStyle(prefs: com.tavi.v2ex.data.Prefs) = MaterialTheme.typography.bodyLarge.copy(
+    fontSize = (MaterialTheme.typography.bodyLarge.fontSize.value * prefs.fontScale).sp,
+    lineHeight = (MaterialTheme.typography.bodyLarge.fontSize.value * prefs.fontScale * prefs.lineHeight).sp,
+    fontWeight = when (prefs.fontWeight) { 1 -> FontWeight.Medium; 2 -> FontWeight.SemiBold; else -> FontWeight.Normal },
+)
+
+@Composable
 fun TopicDetail(
     t: Topic, replies: List<Reply>?, repliesLoading: Boolean, repliesError: String?, shown: Int,
-    list: LazyListState, loadImages: Boolean,
+    list: LazyListState, loadImages: Boolean, onlyOp: Boolean, bodyStyle: androidx.compose.ui.text.TextStyle,
+    mentionUser: String?,
     onMore: () -> Unit, onRetryReplies: () -> Unit,
     onLink: (String) -> Unit, onImage: (String) -> Unit, onMember: (String) -> Unit,
+    onJumpFloor: (Int) -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
-    val visible = replies?.take(shown) ?: emptyList()
+    val filtered = remember(replies, onlyOp, t.member?.username) {
+        val all = replies ?: emptyList()
+        if (onlyOp) all.filter { it.member?.username == t.member?.username } else all
+    }
+    val visible = filtered.take(shown)
     val reachedEnd by remember { derivedStateOf {
         val last = list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
         last >= list.layoutInfo.totalItemsCount - 3
     } }
-    LaunchedEffect(reachedEnd, replies?.size) { if (reachedEnd && replies != null && shown < replies.size) onMore() }
+    LaunchedEffect(reachedEnd, filtered.size) { if (reachedEnd && replies != null && shown < filtered.size) onMore() }
 
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(bottom = 32.dp)) {
         item(key = "head") {
@@ -103,7 +166,7 @@ fun TopicDetail(
                 }
                 if (t.contentHtml.isNotBlank()) {
                     Spacer(Modifier.height(16.dp))
-                    HtmlContent(t.contentHtml, onLink, onImage, loadImages)
+                    HtmlContent(t.contentHtml, onLink, onImage, loadImages, style = bodyStyle, mentionUser = mentionUser)
                 }
                 t.supplements.forEachIndexed { i, sup ->
                     Spacer(Modifier.height(12.dp))
@@ -111,25 +174,35 @@ fun TopicDetail(
                         Column(Modifier.fillMaxWidth().padding(12.dp)) {
                             Text("附言 ${i + 1} · ${relTime(sup.created)}", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                             Spacer(Modifier.height(6.dp))
-                            HtmlContent(sup.contentHtml, onLink, onImage, loadImages, style = MaterialTheme.typography.bodyMedium)
+                            HtmlContent(sup.contentHtml, onLink, onImage, loadImages, style = bodyStyle, mentionUser = mentionUser)
                         }
                     }
                 }
             }
             HorizontalDivider(Modifier.padding(top = 4.dp), thickness = 8.dp, color = cs.surfaceContainerLow)
-            Text(
-                if (replies != null) "${replies.size} 条回复" else "回复",
-                style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(16.dp, 14.dp, 16.dp, 4.dp),
-            )
+            Row(Modifier.padding(16.dp, 14.dp, 16.dp, 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    when {
+                        replies == null -> "回复"
+                        onlyOp -> "楼主回复 ${filtered.size} / ${replies.size}"
+                        else -> "${replies.size} 条回复"
+                    },
+                    style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f),
+                )
+            }
         }
-        items(visible, key = { it.id }) { r -> ReplyRow(r, r.member?.username == t.member?.username, loadImages, onLink, onImage, onMember) }
+        items(visible, key = { it.id }) { r ->
+            val mentionMe = mentionUser != null && r.contentHtml.contains("@$mentionUser", ignoreCase = true)
+            ReplyRow(r, r.member?.username == t.member?.username, loadImages, bodyStyle, mentionUser, mentionMe,
+                onLink, onImage, onMember)
+        }
         item(key = "foot") {
             Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                 when {
                     repliesLoading -> CircularProgressIndicator(Modifier.size(28.dp))
                     repliesError != null -> TextButton(onClick = onRetryReplies) { Text("回复加载失败，点击重试") }
-                    replies != null && shown < replies.size -> TextButton(onClick = onMore) { Text("加载更多回复") }
-                    replies.isNullOrEmpty() -> Text("还没有回复", color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    replies != null && shown < filtered.size -> TextButton(onClick = onMore) { Text("加载更多回复") }
+                    filtered.isEmpty() -> Text(if (onlyOp) "楼主还没有回复" else "还没有回复", color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     else -> Text("已经到底了", color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -138,9 +211,17 @@ fun TopicDetail(
 }
 
 @Composable
-private fun ReplyRow(r: Reply, isOp: Boolean, loadImages: Boolean, onLink: (String) -> Unit, onImage: (String) -> Unit, onMember: (String) -> Unit) {
+private fun ReplyRow(
+    r: Reply, isOp: Boolean, loadImages: Boolean, bodyStyle: androidx.compose.ui.text.TextStyle,
+    mentionUser: String?, mentionMe: Boolean,
+    onLink: (String) -> Unit, onImage: (String) -> Unit, onMember: (String) -> Unit,
+) {
     val cs = MaterialTheme.colorScheme
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+    Row(
+        Modifier.fillMaxWidth()
+            .then(if (mentionMe) Modifier.background(cs.tertiaryContainer.copy(alpha = 0.35f)) else Modifier)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    ) {
         Avatar(r.member?.avatar, 32.dp, Modifier.clickable { r.member?.let { onMember(it.username) } })
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
@@ -153,7 +234,7 @@ private fun ReplyRow(r: Reply, isOp: Boolean, loadImages: Boolean, onLink: (Stri
                 Text("#${r.floor}", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
             }
             Spacer(Modifier.height(4.dp))
-            HtmlContent(r.contentHtml, onLink, onImage, loadImages, style = MaterialTheme.typography.bodyMedium)
+            HtmlContent(r.contentHtml, onLink, onImage, loadImages, style = bodyStyle, mentionUser = mentionUser)
         }
     }
     HorizontalDivider(Modifier.padding(start = 58.dp), color = cs.outlineVariant.copy(alpha = 0.4f))

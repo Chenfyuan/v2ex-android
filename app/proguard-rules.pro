@@ -1,3 +1,3 @@
--keep class org.jsoup.** { *; }
+-keep class com.tavi.v2ex.data.** { *; }
 -dontwarn org.jspecify.**
 -dontwarn okhttp3.internal.**

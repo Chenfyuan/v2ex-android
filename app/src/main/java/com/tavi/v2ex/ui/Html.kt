@@ -34,14 +34,21 @@ sealed interface Block {
 }
 
 /** 把 V2EX 的 content_rendered（HTML）转成原生 Compose 段落 */
-fun parseHtml(html: String, linkColor: Color, codeBg: Color, onLink: (String) -> Unit): List<Block> {
-    val w = Walker(linkColor, codeBg, onLink)
+fun parseHtml(
+    html: String, linkColor: Color, codeBg: Color,
+    mentionUser: String? = null, mentionBg: Color = Color.Transparent,
+    onLink: (String) -> Unit,
+): List<Block> {
+    val w = Walker(linkColor, codeBg, onLink, mentionUser?.lowercase(), mentionBg)
     w.walkChildren(Jsoup.parseBodyFragment(html, "https://www.v2ex.com/").body())
     w.flush()
     return w.blocks
 }
 
-private class Walker(val linkColor: Color, val codeBg: Color, val onLink: (String) -> Unit) {
+private class Walker(
+    val linkColor: Color, val codeBg: Color, val onLink: (String) -> Unit,
+    val mentionUser: String?, val mentionBg: Color,
+) {
     val blocks = mutableListOf<Block>()
     var sb = AnnotatedString.Builder()
     var quote = false
@@ -64,7 +71,20 @@ private class Walker(val linkColor: Color, val codeBg: Color, val onLink: (Strin
                 var t = n.wholeText.replace(Regex("\\s+"), " ")
                 val lc = lastChar()
                 if (t.startsWith(" ") && (lc == null || lc == ' ' || lc == '\n')) t = t.trimStart()
-                if (t.isNotEmpty()) sb.append(t)
+                if (t.isEmpty()) return@forEach
+                if (mentionUser == null) { sb.append(t); return@forEach }
+                val re = Regex("@([\\w-]+)", RegexOption.IGNORE_CASE)
+                var last = 0
+                for (m in re.findAll(t)) {
+                    if (m.range.first > last) sb.append(t.substring(last, m.range.first))
+                    val name = m.groupValues[1]
+                    if (name.equals(mentionUser, true)) {
+                        sb.pushStyle(SpanStyle(background = mentionBg, fontWeight = FontWeight.SemiBold))
+                        sb.append(m.value); sb.pop()
+                    } else sb.append(m.value)
+                    last = m.range.last + 1
+                }
+                if (last < t.length) sb.append(t.substring(last))
             }
             is Element -> walk(n)
         }
@@ -109,10 +129,14 @@ fun HtmlContent(
     loadImages: Boolean,
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyLarge,
+    mentionUser: String? = null,
 ) {
     val cs = MaterialTheme.colorScheme
     val link by rememberUpdatedState(onLink)
-    val blocks = remember(html, cs.primary) { parseHtml(html, cs.primary, cs.surfaceContainerHighest) { link(it) } }
+    val mentionBg = cs.tertiaryContainer
+    val blocks = remember(html, cs.primary, mentionUser) {
+        parseHtml(html, cs.primary, cs.surfaceContainerHighest, mentionUser, mentionBg) { link(it) }
+    }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         blocks.forEach { b ->
             when (b) {

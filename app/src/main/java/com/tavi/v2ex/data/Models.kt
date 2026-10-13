@@ -2,6 +2,7 @@ package com.tavi.v2ex.data
 
 import org.json.JSONArray
 import org.json.JSONObject
+import org.jsoup.Jsoup
 
 data class Member(
     val username: String,
@@ -35,6 +36,7 @@ data class Topic(
     val lastTouched: Long = 0,
     val lastReplyBy: String = "",
     val supplements: List<Supplement> = emptyList(),
+    val thumb: String = "",
 )
 
 data class Supplement(val created: Long, val contentHtml: String)
@@ -63,6 +65,15 @@ internal fun fixUrl(u: String?): String = when {
     else -> u
 }
 
+fun firstImageUrl(html: String): String {
+    if (html.isBlank()) return ""
+    return runCatching {
+        Jsoup.parseBodyFragment(html, "https://www.v2ex.com/").select("img").firstOrNull()?.let {
+            fixUrl(it.absUrl("src").ifBlank { it.attr("src") })
+        } ?: ""
+    }.getOrDefault("")
+}
+
 private fun JSONObject.s(k: String) = optString(k, "").let { if (it == "null") "" else it }
 
 internal fun parseMember(o: JSONObject?): Member? = o?.let {
@@ -83,20 +94,24 @@ internal fun parseNode(o: JSONObject?): Node? = o?.let {
     )
 }
 
-internal fun parseTopic(o: JSONObject) = Topic(
-    id = o.optLong("id"),
-    title = o.s("title"),
-    contentHtml = o.s("content_rendered"),
-    replies = o.optInt("replies"),
-    member = parseMember(o.optJSONObject("member")),
-    node = parseNode(o.optJSONObject("node")),
-    created = o.optLong("created"),
-    lastTouched = o.optLong("last_touched"),
-    lastReplyBy = o.s("last_reply_by"),
-    supplements = o.optJSONArray("supplements")?.objects()?.map {
-        Supplement(it.optLong("created"), it.s("content_rendered"))
-    } ?: emptyList(),
-)
+internal fun parseTopic(o: JSONObject): Topic {
+    val html = o.s("content_rendered")
+    return Topic(
+        id = o.optLong("id"),
+        title = o.s("title"),
+        contentHtml = html,
+        replies = o.optInt("replies"),
+        member = parseMember(o.optJSONObject("member")),
+        node = parseNode(o.optJSONObject("node")),
+        created = o.optLong("created"),
+        lastTouched = o.optLong("last_touched"),
+        lastReplyBy = o.s("last_reply_by"),
+        supplements = o.optJSONArray("supplements")?.objects()?.map {
+            Supplement(it.optLong("created"), it.s("content_rendered"))
+        } ?: emptyList(),
+        thumb = firstImageUrl(html),
+    )
+}
 
 internal fun parseNotice(o: JSONObject) = Notice(
     id = o.optLong("id"), textHtml = o.s("text"),

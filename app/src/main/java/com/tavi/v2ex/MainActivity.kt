@@ -10,9 +10,6 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.remember
-import com.tavi.v2ex.data.Prefs
-import com.tavi.v2ex.data.V2exApi
 import com.tavi.v2ex.ui.*
 
 class MainActivity : ComponentActivity() {
@@ -21,12 +18,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val prefs = Prefs(applicationContext)
-        val api = V2exApi(cacheDir) { prefs.token }
-        val navigator = Navigator(api, prefs, applicationContext).also { nav = it }
+        val app = application as App
+        val navigator = Navigator(app.api, app.prefs, app.dao, applicationContext).also { nav = it }
         handleIntent(intent)
         setContent {
-            AppTheme(prefs.themeMode, prefs.dynamicColor) {
+            AppTheme(app.prefs.themeMode, app.prefs.dynamicColor) {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     BackHandler(navigator.stack.size > 1) { navigator.pop() }
                     AnimatedContent(
@@ -40,11 +36,13 @@ class MainActivity : ComponentActivity() {
                     ) { e ->
                         when (val r = e.route) {
                             Route.Home -> HomeScreen(navigator, e)
-                            is Route.TopicR -> TopicScreen(navigator, e, r.id, r.preview)
+                            is Route.TopicR -> TopicScreen(navigator, e, r.id, r.preview, r.jumpFloor)
                             is Route.NodeR -> NodeScreen(navigator, e, r.name, r.title)
                             is Route.MemberR -> MemberScreen(navigator, e, r.name)
                             Route.Notices -> NoticesScreen(navigator, e)
                             Route.Settings -> SettingsScreen(navigator, e)
+                            Route.Search -> SearchScreen(navigator, e)
+                            Route.Library -> LibraryScreen(navigator, e)
                             is Route.Image -> ImageScreen(navigator, r.url)
                         }
                     }
@@ -55,6 +53,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         handleIntent(intent)
     }
 

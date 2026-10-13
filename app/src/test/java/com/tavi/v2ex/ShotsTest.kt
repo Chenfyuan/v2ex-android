@@ -60,14 +60,21 @@ class ShotsTest {
         }
         rule.setContent {
             AppTheme(1, dynamic = false) {
-                Surface { TopicDetail(t, replies, false, null, 50, LazyListState(), false, {}, {}, {}, {}, {}) }
+                Surface {
+                    TopicDetail(
+                        t, replies, false, null, 50, LazyListState(),
+                        loadImages = false, onlyOp = false,
+                        bodyStyle = MaterialTheme.typography.bodyLarge, mentionUser = null,
+                        onMore = {}, onRetryReplies = {}, onLink = {}, onImage = {}, onMember = {}, onJumpFloor = {},
+                    )
+                }
             }
         }
         rule.onRoot().captureRoboImage("$OUT/3-topic.png")
     }
 
     @Test fun routes() {
-        assertEquals(Route.TopicR(123), Navigator.routeFor("https://www.v2ex.com/t/123#reply4"))
+        assertEquals(Route.TopicR(123, jumpFloor = 4), Navigator.routeFor("https://www.v2ex.com/t/123#reply4"))
         assertEquals(Route.MemberR("Livid"), Navigator.routeFor("https://v2ex.com/member/Livid"))
         assertEquals(Route.NodeR("python"), Navigator.routeFor("https://www.v2ex.com/go/python"))
         assertEquals(null, Navigator.routeFor("https://github.com/x"))
@@ -89,7 +96,8 @@ class SettingsTest {
     @Test fun settingsOpens() {
         val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         val prefs = Prefs(ctx)
-        val nav = Navigator(V2exApi(ctx.cacheDir) { null }, prefs, ctx)
+        val dao = AppDb.get(ctx).dao()
+        val nav = Navigator(V2exApi(ctx.cacheDir) { null }, prefs, dao, ctx)
         rule.setContent { AppTheme(1, false) { SettingsScreen(nav, Entry(Route.Settings)) } }
         rule.onRoot().captureRoboImage("$OUT/4-settings.png")
     }

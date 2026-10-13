@@ -16,7 +16,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -85,8 +88,17 @@ fun NodeScreen(nav: Navigator, entry: Entry, name: String, title: String) {
         }
     }
     val info = s.info.data
+    var bookmarked by remember { mutableStateOf(false) }
+    LaunchedEffect(name) { nav.dao.isNodeBookmarked(name).collect { bookmarked = it } }
+    val scope = rememberCoroutineScope()
     Scaffold(topBar = {
         BackBar(info?.title ?: title, nav) {
+            IconButton(onClick = {
+                scope.launch {
+                    val n = s.info.data ?: Node(name, title)
+                    if (bookmarked) nav.dao.removeNode(name) else nav.dao.saveNode(n.toBookmark())
+                }
+            }) { Icon(if (bookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, "收藏节点") }
             IconButton(onClick = { nav.openExternal("https://www.v2ex.com/go/$name") }) { Icon(Icons.Outlined.OpenInBrowser, "在浏览器打开") }
         }
     }) { pad ->
@@ -96,7 +108,7 @@ fun NodeScreen(nav: Navigator, entry: Entry, name: String, title: String) {
                 data == null && s.topics.error != null -> CenterMessage(s.topics.error!!, "重试") { refresh(false) }
                 data == null -> Loading()
                 else -> PullToRefreshBox(isRefreshing = s.topics.refreshing, onRefresh = { refresh(true) }) {
-                    TopicList(data, s.list, { nav.push(Route.TopicR(it.id, it)) }, { nav.push(Route.MemberR(it)) }, showNode = false, bottomSpace = false,
+                    TopicList(data, s.list, { nav.push(Route.TopicR(it.id, it)) }, { nav.push(Route.MemberR(it)) }, showNode = false, showThumb = nav.prefs.loadImages, bottomSpace = false,
                         header = {
                             Column(Modifier.padding(16.dp, 8.dp)) {
                                 if (info != null) {
@@ -151,7 +163,7 @@ fun MemberScreen(nav: Navigator, entry: Entry, name: String) {
             when {
                 m == null && s.member.error != null -> CenterMessage(s.member.error!!)
                 m == null -> Loading()
-                else -> TopicList(s.topics.data ?: emptyList(), s.list, { nav.push(Route.TopicR(it.id, it)) }, {}, bottomSpace = false, header = {
+                else -> TopicList(s.topics.data ?: emptyList(), s.list, { nav.push(Route.TopicR(it.id, it)) }, {}, showThumb = nav.prefs.loadImages, bottomSpace = false, header = {
                     MemberHeader(m, nav::openUrl)
                     if (s.topics.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     s.topics.error?.let { Text(it, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error) }
@@ -207,7 +219,8 @@ fun NoticesScreen(nav: Navigator, entry: Entry) {
     fun refresh(force: Boolean) = entry.scope.load(s.items, force) {
         api.notifications(1, force).also { s.page = 1; s.hasMore = it.isNotEmpty() }
     }
-    LaunchedEffect(Unit) { if (s.items.data == null) refresh(false) }
+    LaunchedEffect(Unit) { if (s.items.data == null) refresh(false); nav.refreshNoticeCount() }
+    DisposableEffect(Unit) { onDispose { nav.refreshNoticeCount() } }
     val atEnd by remember { derivedStateOf {
         (s.list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) >= s.list.layoutInfo.totalItemsCount - 2
     } }
@@ -222,7 +235,19 @@ fun NoticesScreen(nav: Navigator, entry: Entry) {
             }
         }
     }
-    Scaffold(topBar = { BackBar("提醒", nav) }, snackbarHost = { SnackbarHost(snack) }) { pad ->
+    Scaffold(topBar = {
+        BackBar("提醒", nav) {
+            if ((s.items.data?.size ?: 0) > 0) IconButton(onClick = {
+                entry.scope.launch {
+                    val list = s.items.data ?: return@launch
+                    list.forEach { runCatching { api.deleteNotification(it.id) } }
+                    s.items.data = emptyList()
+                    nav.noticeCount = 0
+                    snack.showSnackbar("已全部清除")
+                }
+            }) { Icon(Icons.Outlined.DoneAll, "全部已读（删除全部）") }
+        }
+    }, snackbarHost = { SnackbarHost(snack) }) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             val data = s.items.data
             when {
@@ -298,8 +323,10 @@ fun SettingsScreen(nav: Navigator, entry: Entry) {
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = {
-                    p.updateToken(input); me.data = null
-                    if (p.token != null) entry.scope.load(me) { api.me(force = true) }
+                    p.updateToken(input); me.data = null; p.updateMe(null)
+                    if (p.token != null) entry.scope.load(me) {
+                        api.me(force = true).also { p.updateMe(it.username); nav.refreshNoticeCount() }
+                    }
                 }) { Text("保存并验证") }
                 OutlinedButton(onClick = { nav.openExternal("https://www.v2ex.com/settings/tokens") }) { Text("去创建令牌") }
             }
@@ -309,7 +336,7 @@ fun SettingsScreen(nav: Navigator, entry: Entry) {
                 me.data != null -> Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Avatar(me.data!!.avatar, 36.dp); Spacer(Modifier.width(10.dp))
                     Text("已登录：${me.data!!.username}", Modifier.weight(1f))
-                    TextButton(onClick = { p.updateToken(null); input = ""; me.data = null }) { Text("退出") }
+                    TextButton(onClick = { p.updateToken(null); input = ""; me.data = null; p.updateMe(null); nav.noticeCount = 0 }) { Text("退出") }
                 }
             }
 
@@ -324,6 +351,21 @@ fun SettingsScreen(nav: Navigator, entry: Entry) {
             if (Build.VERSION.SDK_INT >= 31) SwitchRow("动态取色", "跟随壁纸颜色", p.dynamicColor, p::updateDynamic)
             SwitchRow("自动加载图片", "关闭后点按才加载，省流量", p.loadImages, p::updateImages)
 
+
+            SectionTitle("阅读")
+            Text("正文字号", style = MaterialTheme.typography.labelLarge)
+            Slider(value = p.fontScale, onValueChange = p::updateFontScale, valueRange = 0.85f..1.4f, steps = 10)
+            Text("行距", style = MaterialTheme.typography.labelLarge)
+            Slider(value = p.lineHeight, onValueChange = p::updateLineHeight, valueRange = 1.2f..2.0f, steps = 7)
+            Text("字重", style = MaterialTheme.typography.labelLarge)
+            val weights = listOf("常规", "中等", "半粗")
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                weights.forEachIndexed { i, m ->
+                    SegmentedButton(selected = p.fontWeight == i, onClick = { p.updateFontWeight(i) },
+                        shape = SegmentedButtonDefaults.itemShape(i, weights.size)) { Text(m) }
+                }
+            }
+
             SectionTitle("数据")
             val remain = api.rateRemaining
             Text(
@@ -335,7 +377,7 @@ fun SettingsScreen(nav: Navigator, entry: Entry) {
             cacheMsg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
             SectionTitle("关于")
-            Text("V2 阅读 0.1.2 · 非官方 V2EX 客户端，数据来自 V2EX 公开接口。", style = MaterialTheme.typography.bodySmall,
+            Text("V2 阅读 0.2.0 · 非官方 V2EX 客户端，数据来自 V2EX 公开接口。", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(32.dp))
         }

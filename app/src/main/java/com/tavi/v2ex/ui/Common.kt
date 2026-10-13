@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,7 +55,10 @@ fun NodeLabel(title: String, onClick: (() -> Unit)? = null) {
 }
 
 @Composable
-fun TopicRow(t: Topic, onClick: () -> Unit, onMember: (String) -> Unit, showNode: Boolean = true) {
+fun TopicRow(
+    t: Topic, onClick: () -> Unit, onMember: (String) -> Unit,
+    showNode: Boolean = true, showThumb: Boolean = false,
+) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top,
@@ -73,11 +77,19 @@ fun TopicRow(t: Topic, onClick: () -> Unit, onMember: (String) -> Unit, showNode
                 Text(
                     listOf(who, relTime(t.lastTouched.takeIf { it > 0 } ?: t.created)).filter { it.isNotBlank() }.joinToString(" · "),
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
                 )
             }
         }
-        if (t.replies > 0) {
+        if (showThumb && t.thumb.isNotBlank()) {
+            Spacer(Modifier.width(10.dp))
+            AsyncImage(
+                model = t.thumb, contentDescription = "配图",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(56.dp).clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+            )
+        } else if (t.replies > 0) {
             Spacer(Modifier.width(12.dp))
             Text(
                 "${t.replies}", style = MaterialTheme.typography.labelMedium,
@@ -99,3 +111,9 @@ fun CenterMessage(text: String, action: String? = null, onAction: () -> Unit = {
 
 @Composable
 fun Loading() = Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+
+@Composable
+fun BadgedIcon(count: Int, content: @Composable () -> Unit) {
+    if (count <= 0) content()
+    else BadgedBox(badge = { Badge { Text(if (count > 99) "99+" else "$count") } }) { content() }
+}
