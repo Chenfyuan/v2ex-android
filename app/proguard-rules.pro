@@ -1,0 +1,3 @@
+-keep class org.jsoup.** { *; }
+-dontwarn org.jspecify.**
+-dontwarn okhttp3.internal.**
