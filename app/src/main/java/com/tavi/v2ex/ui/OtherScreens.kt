@@ -73,7 +73,7 @@ fun NodeScreen(nav: Navigator, entry: Entry, name: String, title: String) {
     fun refresh(force: Boolean) {
         entry.scope.load(s.info) { api.node(name) }
         entry.scope.load(s.topics, force) {
-            val (l, more) = api.nodeTopics(name, 1, force); s.page = 1; s.hasMore = more; l
+            val (l, more) = api.nodeTopics(name, 1, force, nav.prefs.webPaging); s.page = 1; s.hasMore = more; l
         }
     }
     LaunchedEffect(Unit) { if (s.topics.data == null) refresh(false) }
@@ -84,7 +84,7 @@ fun NodeScreen(nav: Navigator, entry: Entry, name: String, title: String) {
         if (atEnd && s.hasMore && !s.loadingMore && s.moreError == null && s.topics.data != null) {
             s.loadingMore = true
             entry.scope.launch {
-                runCatching { api.nodeTopics(name, s.page + 1) }.onSuccess { (l, more) ->
+                runCatching { api.nodeTopics(name, s.page + 1, web = nav.prefs.webPaging) }.onSuccess { (l, more) ->
                     s.page += 1; s.hasMore = more; s.topics.data = (s.topics.data ?: emptyList()) + l.filter { n -> s.topics.data?.none { it.id == n.id } != false }
                 }.onFailure { s.moreError = it.message ?: "加载失败" }
                 s.loadingMore = false
@@ -124,7 +124,7 @@ fun NodeScreen(nav: Navigator, entry: Entry, name: String, title: String) {
                                 s.loadingMore -> Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
                                 s.moreError != null -> ListEndFooter(s.moreError!!, "重试") { s.moreError = null }
                                 s.hasMore -> ListEndFooter("继续上滑加载更多")
-                                nav.prefs.token == null -> ListEndFooter("未填令牌只能看最新 10 条。在设置里填写个人访问令牌后可继续翻页", "去设置") { nav.push(Route.Settings) }
+                                nav.prefs.token == null && !nav.prefs.webPaging -> ListEndFooter("未填令牌只能看最新 10 条。在设置里填写个人访问令牌后可继续翻页", "去设置") { nav.push(Route.Settings) }
                                 else -> ListEndFooter("已经到底了，下拉可刷新", "刷新") { refresh(true) }
                             }
                         },
@@ -146,7 +146,7 @@ fun NodeScreen(nav: Navigator, entry: Entry, name: String, title: String) {
                                             style = MaterialTheme.typography.bodySmall)
                                     }
                                 }
-                                if (nav.prefs.token == null) {
+                                if (nav.prefs.token == null && !nav.prefs.webPaging) {
                                     Spacer(Modifier.height(8.dp))
                                     Text("未设置令牌时只能看到最新 10 个主题，在设置里填写令牌后可以继续往下翻。",
                                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -372,6 +372,7 @@ fun SettingsScreen(nav: Navigator, entry: Entry) {
                 }
             }
             if (Build.VERSION.SDK_INT >= 31) SwitchRow("动态取色", "跟随壁纸颜色", p.dynamicColor, p::updateDynamic)
+            SwitchRow("网页增强翻页", "「最新」和未填令牌的节点可一直下滑加载（只读取公开网页，不登录）", p.webPaging, p::updateWebPaging)
             SwitchRow("自动加载图片", "关闭后点按才加载，省流量", p.loadImages, p::updateImages)
 
 
@@ -465,7 +466,7 @@ fun SettingsScreen(nav: Navigator, entry: Entry) {
             cacheMsg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
             SectionTitle("关于")
-            Text("V2 阅读 0.3.1 · 非官方 V2EX 客户端，数据来自 V2EX 公开接口。", style = MaterialTheme.typography.bodySmall,
+            Text("V2 阅读 0.4.0 · 非官方 V2EX 客户端，数据来自 V2EX 公开接口。", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(32.dp))
         }

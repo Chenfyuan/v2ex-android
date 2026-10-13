@@ -2,6 +2,7 @@ package com.tavi.v2ex.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -29,9 +30,12 @@ class V2exApi(private val cacheDir: File, private val token: () -> String?) {
      * @param ttlMs 新鲜期内直接用缓存
      * @param staleMs 过期后仍可作为弱网回退的最长时间（默认与 ttl 相同；主题/回复用 7 天）
      */
+    private val webLock = kotlinx.coroutines.sync.Mutex()
+    @Volatile private var lastWebAt = 0L
+
     private suspend fun get(
         path: String, ttlMs: Long, auth: Boolean = false, force: Boolean = false,
-        staleMs: Long = ttlMs,
+        staleMs: Long = ttlMs, html: Boolean = false,
     ): String = withContext(Dispatchers.IO) {
         val key = (if (auth) "a:" else "") + path
         val now = System.currentTimeMillis()
@@ -44,7 +48,12 @@ class V2exApi(private val cacheDir: File, private val token: () -> String?) {
             }
         }
         try {
-            val body = http("GET", path, auth)
+            val body = if (html) webLock.withLock {
+                // 网页请求温和限速：两次之间至少 1.2 秒
+                val wait = 1200 - (System.currentTimeMillis() - lastWebAt)
+                if (wait > 0) kotlinx.coroutines.delay(wait)
+                try { http("GET", path, false, html = true) } finally { lastWebAt = System.currentTimeMillis() }
+            } else http("GET", path, auth)
             mem[key] = now to body
             runCatching { f.writeText(body) }
             body
@@ -85,14 +94,22 @@ class V2exApi(private val cacheDir: File, private val token: () -> String?) {
         return "请求过于频繁（本小时剩余 ${rem ?: 0}/$lim）。V2EX 限制每个 IP 每小时约 600 次。$wait。"
     }
 
-    private fun http(method: String, path: String, auth: Boolean): String {
+    private fun http(method: String, path: String, auth: Boolean, html: Boolean = false): String {
         val conn = URL(BASE + path).openConnection() as HttpURLConnection
         try {
             conn.requestMethod = method
             conn.connectTimeout = 15_000
             conn.readTimeout = 20_000
-            conn.setRequestProperty("User-Agent", "V2Reader/0.3 (Android)")
-            conn.setRequestProperty("Accept", "application/json")
+            if (html) {
+                conn.setRequestProperty("User-Agent", WEB_UA)
+                conn.setRequestProperty("Accept", "text/html,application/xhtml+xml")
+                conn.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9")
+            } else {
+                conn.setRequestProperty("User-Agent", "V2Reader/0.4 (Android)")
+                conn.setRequestProperty("Accept", "application/json")
+            }
+            conn.instanceFollowRedirects = true
+            conn.useCaches = false
             if (auth) {
                 val t = token() ?: throw ApiException("还没有填写个人访问令牌。请到「设置」里粘贴令牌后再试。", 401)
                 conn.setRequestProperty("Authorization", "Bearer $t")
@@ -149,7 +166,15 @@ class V2exApi(private val cacheDir: File, private val token: () -> String?) {
     suspend fun node(name: String) =
         parseNode(JSONObject(get("/api/nodes/show.json?name=${enc(name)}", 60 * MIN, staleMs = 7 * DAY)))!!
 
-    suspend fun nodeTopics(name: String, page: Int, force: Boolean = false): Pair<List<Topic>, Boolean> {
+    suspend fun nodeTopics(name: String, page: Int, force: Boolean = false, web: Boolean = false): Pair<List<Topic>, Boolean> {
+        if (token() == null && web) {
+            try {
+                val l = nodeWeb(name, page, force)
+                return l to l.isNotEmpty()
+            } catch (e: Exception) {
+                if (page > 1) throw e
+            }
+        }
         if (token() != null) {
             val arr = v2Result(get("/api/v2/nodes/${enc(name)}/topics?p=$page", 2 * MIN, auth = true, force = force, staleMs = DAY)) as? JSONArray
             val list = arr?.objects()?.map(::parseTopic) ?: emptyList()
@@ -194,6 +219,23 @@ class V2exApi(private val cacheDir: File, private val token: () -> String?) {
         Unit
     }
 
+    /** 网页翻页：全站最新。解析为空时抛错，调用方回退 latest.json */
+    suspend fun recentWeb(page: Int, force: Boolean = false): List<Topic> {
+        val list = WebParser.parseTopicList(get("/recent?p=$page", 2 * MIN, force = force, staleMs = DAY, html = true))
+        if (list.isEmpty() && page == 1) throw ApiException("网页解析失败")
+        return list
+    }
+
+    /** 网页翻页：节点主题（无需令牌） */
+    suspend fun nodeWeb(name: String, page: Int, force: Boolean = false): List<Topic> {
+        val list = WebParser.parseTopicList(
+            get("/go/${enc(name)}?p=$page", 2 * MIN, force = force, staleMs = DAY, html = true),
+            Node(name, name),
+        )
+        if (list.isEmpty() && page == 1) throw ApiException("网页解析失败")
+        return list
+    }
+
     fun clearCache() {
         mem.clear()
         cacheDir.listFiles()?.filter { it.name.startsWith("api_") }?.forEach { it.delete() }
@@ -205,5 +247,6 @@ class V2exApi(private val cacheDir: File, private val token: () -> String?) {
         const val BASE = "https://www.v2ex.com"
         private const val MIN = 60_000L
         private const val DAY = 24 * 60 * MIN
+        const val WEB_UA = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36"
     }
 }

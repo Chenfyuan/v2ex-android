@@ -38,6 +38,9 @@ class Prefs(context: Context) {
     var homeOrder by mutableStateOf(sp.getString("homeOrder", "hot,latest,nodes")!!); private set
     var defaultTab by mutableStateOf(sp.getString("defaultTab", "hot")!!); private set
 
+    var webPaging by mutableStateOf(sp.getBoolean("webPaging", true)); private set
+    fun updateWebPaging(v: Boolean) { webPaging = v; sp.edit().putBoolean("webPaging", v).apply() }
+
     fun homeTabs(): List<HomeTab> = HomeTab.parseOrder(homeOrder)
     fun defaultTabIndex(): Int {
         val tabs = homeTabs()

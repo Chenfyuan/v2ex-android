@@ -62,6 +62,43 @@ class HomeState(initialTabs: List<HomeTab>, val initialPage: Int) {
     var tabs by mutableStateOf(initialTabs)
     val lists = List(8) { LazyListState() }
     var query by mutableStateOf("")
+    var latestPage by mutableIntStateOf(1)
+    var latestHasMore by mutableStateOf(false)
+    var latestLoadingMore by mutableStateOf(false)
+    var latestMoreError by mutableStateOf<String?>(null)
+}
+
+/** 最新：网页增强时走 /recent?p=N，失败回退 latest.json */
+fun loadLatest(s: HomeState, nav: Navigator, entry: Entry, force: Boolean) {
+    entry.scope.load(s.latest, force) {
+        s.latestMoreError = null
+        if (nav.prefs.webPaging) {
+            runCatching { nav.api.recentWeb(1, force) }.getOrNull()?.let {
+                s.latestPage = 1; s.latestHasMore = true
+                return@load it
+            }
+        }
+        s.latestPage = 1; s.latestHasMore = false
+        nav.api.latest(force)
+    }
+}
+
+fun loadMoreLatest(s: HomeState, nav: Navigator, entry: Entry) {
+    if (!s.latestHasMore || s.latestLoadingMore || s.latestMoreError != null) return
+    s.latestLoadingMore = true
+    entry.scope.launch {
+        runCatching { nav.api.recentWeb(s.latestPage + 1) }
+            .onSuccess { l ->
+                val old = s.latest.data ?: emptyList()
+                val ids = old.map { it.id }.toHashSet()
+                val fresh = l.filter { it.id !in ids }
+                s.latestPage += 1
+                s.latestHasMore = l.isNotEmpty()
+                s.latest.data = old + fresh
+            }
+            .onFailure { s.latestMoreError = it.message ?: "加载失败" }
+        s.latestLoadingMore = false
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,7 +123,7 @@ fun HomeScreen(nav: Navigator, entry: Entry) {
     }
     LaunchedEffect(pager.currentPage, s.tabs) {
         when (s.tabs.getOrNull(pager.currentPage)) {
-            HomeTab.LATEST -> if (s.latest.data == null) entry.scope.load(s.latest) { api.latest() }
+            HomeTab.LATEST -> if (s.latest.data == null) loadLatest(s, nav, entry, false)
             HomeTab.NODES -> if (s.nodes.data == null) entry.scope.load(s.nodes) { api.allNodes() }
             else -> Unit
         }
@@ -127,8 +164,11 @@ fun HomeScreen(nav: Navigator, entry: Entry) {
                     )
                     HomeTab.LATEST -> TopicListPane(
                         s.latest, s.lists[1], nav, userSet, nodeSet,
-                        { entry.scope.load(s.latest, true) { api.latest(force = true) } },
-                        { entry.scope.load(s.latest) { api.latest() } },
+                        { loadLatest(s, nav, entry, true) },
+                        { loadLatest(s, nav, entry, false) },
+                        paging = PagingUi(s.latestHasMore, s.latestLoadingMore, s.latestMoreError,
+                            onMore = { loadMoreLatest(s, nav, entry) },
+                            onRetry = { s.latestMoreError = null; loadMoreLatest(s, nav, entry) }),
                     )
                     HomeTab.NODES -> NodesPane(s, nav, nodeSet) {
                         entry.scope.load(s.nodes, true) { api.allNodes(force = true) }
@@ -219,8 +259,17 @@ fun TopicListPane(
     l: Loadable<List<Topic>>, state: LazyListState, nav: Navigator,
     blockedUsers: Set<String>, blockedNodes: Set<String>,
     onRefresh: () -> Unit, onRetry: () -> Unit,
+    paging: PagingUi? = null,
 ) {
     val data = l.data?.filterBlocked(blockedUsers, blockedNodes)
+    if (paging != null) {
+        val atEnd by remember(state) { derivedStateOf {
+            (state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) >= state.layoutInfo.totalItemsCount - 4
+        } }
+        LaunchedEffect(atEnd, paging.hasMore, paging.loading, paging.error, l.data?.size) {
+            if (atEnd && paging.hasMore && !paging.loading && paging.error == null && l.data != null) paging.onMore()
+        }
+    }
     when {
         l.data == null && l.error != null -> CenterMessage(l.error!!, "重试", onRetry)
         l.data == null -> Loading()
@@ -231,7 +280,14 @@ fun TopicListPane(
                 onMember = { nav.push(Route.MemberR(it)) },
                 showThumb = nav.prefs.loadImages,
                 footer = {
-                    ListEndFooter("已显示全部 ${data?.size ?: 0} 条。V2EX 接口不支持继续翻页，下拉可刷新获取最新", "刷新", onRefresh)
+                    when {
+                        paging?.loading == true -> Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(Modifier.size(28.dp))
+                        }
+                        paging?.error != null -> ListEndFooter(paging.error, "重试", paging.onRetry)
+                        paging?.hasMore == true -> ListEndFooter("继续上滑加载更多")
+                        else -> ListEndFooter("已显示全部 ${data?.size ?: 0} 条。V2EX 接口不支持继续翻页，下拉可刷新获取最新", "刷新", onRefresh)
+                    }
                 },
             )
         }
@@ -328,3 +384,8 @@ fun HomeLibraryPane(nav: Navigator, blockedUsers: Set<String>, blockedNodes: Set
         )
     }
 }
+
+class PagingUi(
+    val hasMore: Boolean, val loading: Boolean, val error: String?,
+    val onMore: () -> Unit, val onRetry: () -> Unit,
+)

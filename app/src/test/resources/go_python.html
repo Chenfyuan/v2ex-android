@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8">
+	<meta content="True" name="HandheldFriendly">
+    <meta name="Referrer" content="unsafe-url">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    
+    <meta name="theme-color" content="#ffffff">
+    
+    
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="detectify-verification" content="d0264f228155c7a1f72c3d91c17ce8fb" />
+<meta name="p:domain_verify" content="b87e3b55b409494aab88c1610b05a5f0"/>
+<meta name="alexaVerifyID" content="OFc8dmwZo7ttU4UCnDh1rKDtLlY" />
+<meta name="baidu-site-verification" content="D00WizvYyr" />
+<meta name="msvalidate.01" content="D9B08FEA08E3DA402BF07ABAB61D77DE" />
+<meta property="wb:webmaster" content="f2f4cb229bda06a4" />
+<meta name="google-site-verification" content="LM_cJR94XJIqcYJeOCscGVMWdaRUvmyz6cVOqkFplaU" />
+<meta name="wwads-cn-verify" content="c8ffe9a587b126f152ed3d89a146b445" />
+<script type="text/javascript" src="https://cdn.wwads.cn/js/makemoney.js" async></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5060390720525238"
+     crossorigin="anonymous"></script>
+<script defer data-site="388d5c063206" src="https://stats.v2core.com/js/s.js"></script>
+    
+    <link rel="icon" sizes="192x192" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon-180.png?v=91e795b8b5d9e2cbf2d886c3d4b7d63c">
+    <title>Python</title>
+    <link rel="dns-prefetch" href="https://static.v2ex.com/" />
+<link rel="dns-prefetch" href="https://cdn.v2ex.com/" />
+<link rel="dns-prefetch" href="https://i.v2ex.co/" />
+<link rel="dns-prefetch" href="https://www.google-analytics.com/" />    
+    <style>
+        body {
+            font-family: "Helvetica Neue", "Luxi Sans", "Segoe UI", "Hiragino Sans GB", "Microsoft Yahei", sans-serif, "Apple Logo";
+        }
+    </style>
+    <link rel="stylesheet" type="text/css" media="screen" href="/assets/90fc75c9b294655d6d9a40370e5097e087c49eef-style.css?t=1791870000">
+    <link rel="stylesheet" type="text/css" media="screen" href="/assets/a968a3703d50353bf2d707239299e7fc7f4b802b-mobile.css?t=1791870000">
+    
+    <script>
+        const SITE_NIGHT = 0;
+    </script>
+    <link rel="stylesheet" href="/static/css/vendor/tomorrow.css?v=3c006808236080a5d98ba4e64b8f323f" type="text/css">
+    
+    <link rel="stylesheet" href="/static/css/font-awesome.min.css?v=295235b28b6e649d99539a9d32b95d30">
+    <link rel="stylesheet" href="/static/css/select2.min.css?v=e71c39430469a3eea74514a2b48f6536" >
+    <link rel="stylesheet" href="/static/css/selectboxit.css?v=5dc55d3860ef80ef1875d6800a5fbfa3" >
+    <link rel="shortcut icon" href="/static/favicon.ico?v=bd989a59ed950fa4feded2ea25d8ddd5" type="image/png">
+    
+    <script>
+        const LANG = 'enus';
+        const FEATURES = ['search', 'user-menu'];
+    </script>
+    <script src="/assets/be64d74d5348efe4bfa36ec47ec23158fc1bcb2c-combo.js?t=1791870000" type="text/javascript" defer></script>
+    <meta name="description" content="这里讨论各种 Python 语言编程话题，也包括 Django，Tornado 等框架的讨论。这里是一个能够帮助你解决实际问题的地方。">
+    
+    <link rel="alternate" type="application/atom+xml" href="/feed/python.xml">
+    
+    
+
+<script>
+document.addEventListener("DOMContentLoaded", function(event) {
+    const topicLinks = document.getElementsByClassName('topic-link');
+const moreLinks = document.getElementsByClassName('count_livid');
+const orangeLinks = document.getElementsByClassName('count_orange');
+// merge non-duplicate arrays
+const links = Array.from(new Set([...topicLinks, ...moreLinks, ...orangeLinks]));
+for (link in links) {
+    let aLink = links[link];
+    if (aLink === undefined) {
+        continue;
+    }
+    if (!aLink.hasAttribute || !aLink.hasAttribute('href')) {
+        continue;
+    }
+    let href = aLink.getAttribute('href');
+    if (href && href.startsWith('/t/')) {
+        // href is something like "/t/1234#reply567"
+        const topicID = href.split('/')[2].split('#')[0];
+        const key = "tp" + topicID;
+        const value = lscache.get(key);
+        if (value) {
+            const anchor = href.split('#')[1];
+            const newHref = "/t/" + topicID + "?p=" + value + "#" + anchor;
+            aLink.setAttribute('href', newHref);
+            console.log("Set p for topic " + topicID + " to " + value + ": " + newHref);
+        }
+    }
+}
+
+    tippy('[title]', {
+        placement: 'bottom',
+        arrow: true,
+        arrowTransform: 'translateY(-2px)'
+    });
+});
+</script>
+
+<script type="application/ld+json">{"dateModified": "2022-03-27T00:12:28Z", "description": "这里讨论各种 Python 语言编程话题，也包括 Django，Tornado 等框架的讨论。这里是一个能够帮助你解决实际问题的地方。", "url": "https://www.v2ex.com/go/python?p=2", "image": "https://cdn.v2ex.com/navatar/8613/985e/90_xxxlarge.png?m=1648339948", "dateCreated": "2010-07-09T13:48:56Z", "@context": "https://schema.org", "mainEntity": {"itemListElement": [{"url": "https://www.v2ex.com/t/1214517", "position": 21, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/mitwj", "@type": "Person", "name": "mitwj"}, "headline": "小白求推荐人工智能学习的网课", "datePublished": "2026-05-21T13:16:26Z", "commentCount": 8, "url": "https://www.v2ex.com/t/1214517", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1213910", "position": 22, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/1722332572", "@type": "Person", "name": "1722332572"}, "headline": "humanize-text 一个开源的 AI 文本拟人化工具集", "datePublished": "2026-05-19T13:12:05Z", "commentCount": 0, "url": "https://www.v2ex.com/t/1213910", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1209881", "position": 23, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/Srande", "@type": "Person", "name": "Srande"}, "headline": "[开源] 我正在用 Python 复刻经典游戏红色警戒 2", "datePublished": "2026-05-01T12:15:43Z", "commentCount": 17, "url": "https://www.v2ex.com/t/1209881", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1212230", "position": 24, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/xgordon", "@type": "Person", "name": "xgordon"}, "headline": "从会议录音到知识库全自动：我把数百段录音做成了可 RAG 问答的 Wiki（附开源代码）", "datePublished": "2026-05-12T09:41:25Z", "commentCount": 6, "url": "https://www.v2ex.com/t/1212230", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1210860", "position": 25, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/1722332572", "@type": "Person", "name": "1722332572"}, "headline": "CodexSaver：在不让 Codex 变笨的前提下，让它更便宜。", "datePublished": "2026-05-07T06:51:10Z", "commentCount": 1, "url": "https://www.v2ex.com/t/1210860", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1209532", "position": 26, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/admirez", "@type": "Person", "name": "admirez"}, "headline": "有准确绘制缠论中枢的 Python 代码借鉴么", "datePublished": "2026-04-30T00:50:21Z", "commentCount": 7, "url": "https://www.v2ex.com/t/1209532", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1212876", "position": 27, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/565784135", "@type": "Person", "name": "565784135"}, "headline": "9.9 元起！跨境卖家疯抢的纯净住宅 IP 辣椒 HTTP，到底有多香？", "datePublished": "2026-05-15T02:02:37Z", "commentCount": 4, "url": "https://www.v2ex.com/t/1212876", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1207844", "position": 28, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/bowenfu", "@type": "Person", "name": "bowenfu"}, "headline": "做了一个面向张量计算的语言，可从 Python 调用，支持显式索引和自动求导", "datePublished": "2026-04-22T14:05:26Z", "commentCount": 0, "url": "https://www.v2ex.com/t/1207844", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1197162", "position": 29, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/sunfinv", "@type": "Person", "name": "sunfinv"}, "headline": "分享一个完全免费的中国 A 股数据获取库", "datePublished": "2026-03-10T08:00:14Z", "commentCount": 72, "url": "https://www.v2ex.com/t/1197162", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1202699", "position": 30, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/xFrank", "@type": "Person", "name": "xFrank"}, "headline": "发现 Python 一个有意思的小特性，发现很合适搞成面试题。问了 AI 都不行:)，欢迎来挑战~", "datePublished": "2026-04-01T02:12:53Z", "commentCount": 43, "url": "https://www.v2ex.com/t/1202699", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1206122", "position": 31, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/Junian", "@type": "Person", "name": "Junian"}, "headline": "把电脑伪装成电视，用 DLNA 投屏拿到视频号直播流地址", "datePublished": "2026-04-15T08:34:50Z", "commentCount": 17, "url": "https://www.v2ex.com/t/1206122", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1204542", "position": 32, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/KingZZZZ", "@type": "Person", "name": "KingZZZZ"}, "headline": "爬虫开发工作中，你们是如何基于 AI 进行提效的？", "datePublished": "2026-04-09T03:09:13Z", "commentCount": 17, "url": "https://www.v2ex.com/t/1204542", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1201368", "position": 33, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/shadowmeld", "@type": "Person", "name": "shadowmeld"}, "headline": "大型 Python 开源项目都不会对变量进行类型注解？", "datePublished": "2026-03-26T08:58:06Z", "commentCount": 18, "url": "https://www.v2ex.com/t/1201368", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1200848", "position": 34, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/programMrxu", "@type": "Person", "name": "programMrxu"}, "headline": "使用 pycharm 开发 Python ，自定义代码风格，并实时提示", "datePublished": "2026-03-24T14:53:30Z", "commentCount": 0, "url": "https://www.v2ex.com/t/1200848", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1199608", "position": 35, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/Deteriorator", "@type": "Person", "name": "Deteriorator"}, "headline": "慎用 PyCharm Remote Development 功能", "datePublished": "2026-03-19T12:28:01Z", "commentCount": 13, "url": "https://www.v2ex.com/t/1199608", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1199650", "position": 36, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/GPLer", "@type": "Person", "name": "GPLer"}, "headline": "创造了 uv 的 Astral 公司被 OpenAI 收购", "datePublished": "2026-03-19T15:52:54Z", "commentCount": 7, "url": "https://www.v2ex.com/t/1199650", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1199233", "position": 37, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/zxccv1876", "@type": "Person", "name": "zxccv1876"}, "headline": "Python 3.15 JIT 的最新进展，已经有大概 5%的性能提升了", "datePublished": "2026-03-18T07:32:11Z", "commentCount": 10, "url": "https://www.v2ex.com/t/1199233", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1198963", "position": 38, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/leemysw", "@type": "Person", "name": "leemysw"}, "headline": "[开源] 做了个 feishu-docx，把飞书知识库变成 AI 更容易读写和管理的内容源，方便给 Agent 用", "datePublished": "2026-03-17T08:39:18Z", "commentCount": 5, "url": "https://www.v2ex.com/t/1198963", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1198097", "position": 39, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/mrytsr", "@type": "Person", "name": "mrytsr"}, "headline": "开源项目： clawOS 解决 openclaw 文件系统，一键安装", "datePublished": "2026-03-13T08:55:57Z", "commentCount": 0, "url": "https://www.v2ex.com/t/1198097", "@type": "DiscussionForumPosting"}}, {"url": "https://www.v2ex.com/t/1197248", "position": 40, "@type": "ListItem", "item": {"author": {"url": "https://www.v2ex.com/member/sunfinv", "@type": "Person", "name": "sunfinv"}, "headline": "我用免费 A 股数据做了几个工具，欢迎一起开源！", "datePublished": "2026-03-10T15:50:40Z", "commentCount": 1, "url": "https://www.v2ex.com/t/1197248", "@type": "DiscussionForumPosting"}}], "@type": "ItemList", "itemListOrder": "https://schema.org/ItemListOrderDescending", "numberOfItems": 16296}, "@type": "CollectionPage", "name": "Python"}</script>
+
+
+</head>
+<body>
+    
+    <header id="site-header">
+    <a href="/" id="site-header-logo" title="V2EX"><div id="LogoMobile"></div></a>
+    <div id="search-container">
+        <input id="search" type="text" maxlength="128" autocomplete="off" tabindex="1">
+        <div id="search-result" class="box"></div>
+    </div>
+    
+    <div id="site-header-menu">
+    <button id="menu-entry">
+        
+        <img class="menu-guest mobile" src="/static/img/ellipse_light.png" alt="More">
+        
+    </button>
+    <div id="menu-body" class="box">
+        <div class="cell">
+            <a href="/" class="top">首页</a>
+            <a href="/signup" class="top">注册</a>
+            <a href="/signin" class="top">登录</a>
+        </div>
+        <div class="cell">
+            <a href="/settings/night/toggle?once=69185" class="top">
+                
+                <img class="site-theme-toggle mobile" src="/static/img/toggle-light.png" alt="Light">
+                
+            </a>
+        </div>
+    </div>
+</div>
+    
+</header>
+    <div id="Wrapper">
+        <div class="content">
+            
+<div class="box box-title node-header">
+    <div class="cell page-content-header">
+        
+        <img src="https://cdn.v2ex.com/navatar/8613/985e/90_xlarge.png?m=1648339948" border="0" align="default" width="64" alt="python" />
+        
+        <div>
+            <div class="title">
+                <div class="node-breadcrumb"><a href="/">V2EX</a> <span class="chevron">&nbsp;›&nbsp;</span> Python</div>
+                <span class="topic-count">Topics <strong>16,296</strong></span>
+                <span class="node-feed">
+                    <a href="/feed/python.xml" target="_blank"><img src="/static/img/rss@2x.png?v=75acbbff5b6041ae197f371447ab0c07" alt="RSS" /></a>
+                    <a href="/feed/python.json" target="_blank"><img src="/static/img/json-feed.png?v=a2d98663319ecfabacf796fab6a005a7" alt="JSON Feed" /></a>
+                </span>
+            </div>
+            
+            <div class="intro">这里讨论各种 Python 语言编程话题，也包括 Django，Tornado 等框架的讨论。这里是一个能够帮助你解决实际问题的地方。</div>
+            
+        </div>
+    </div>
+    
+</div>
+<div class="box">
+    
+    <div class="cell tab-alt-container">
+    <a href="/go/python" class="tab-alt active">
+        All Topics
+    </a>
+    
+    
+</div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/mitwj"><img src="https://cdn.v2ex.com/gravatar/0444260dae6ae426070e1b0ead17866f?s=24&d=retro" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="mitwj" data-uid="321401" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1214517#reply8" class="topic-link" id="topic-link-1214517">小白求推荐人工智能学习的网课</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>mitwj</strong> &nbsp;•&nbsp; 195 characters &nbsp;•&nbsp; 22019 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1214517#reply8" class="count_livid">8</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/1722332572"><img src="https://cdn.v2ex.com/avatar/31e3/2c4d/135473_normal.png?m=1739072858" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="1722332572" data-uid="135473" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1213910#reply0" class="topic-link" id="topic-link-1213910">humanize-text 一个开源的 AI 文本拟人化工具集</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>1722332572</strong> &nbsp;•&nbsp; 1003 characters &nbsp;•&nbsp; 20152 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/Srande"><img src="https://cdn.v2ex.com/avatar/a481/0e49/593979_normal.png?m=1782385537" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="Srande" data-uid="593979" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1209881#reply17" class="topic-link" id="topic-link-1209881">[开源] 我正在用 Python 复刻经典游戏红色警戒 2</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>Srande</strong> &nbsp;•&nbsp; 361 characters &nbsp;•&nbsp; 23781 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1209881#reply17" class="count_livid">17</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/xgordon"><img src="https://cdn.v2ex.com/gravatar/e640a28ca504abb5dfb3e9300debeaca?s=24&d=retro" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="xgordon" data-uid="631103" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1212230#reply6" class="topic-link" id="topic-link-1212230">从会议录音到知识库全自动：我把数百段录音做成了可 RAG 问答的 Wiki（附开源代码）</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>xgordon</strong> &nbsp;•&nbsp; 1503 characters &nbsp;•&nbsp; 21660 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1212230#reply6" class="count_livid">6</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/1722332572"><img src="https://cdn.v2ex.com/avatar/31e3/2c4d/135473_normal.png?m=1739072858" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="1722332572" data-uid="135473" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1210860#reply1" class="topic-link" id="topic-link-1210860">CodexSaver：在不让 Codex 变笨的前提下，让它更便宜。</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>1722332572</strong> &nbsp;•&nbsp; 266 characters &nbsp;•&nbsp; 21575 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1210860#reply1" class="count_livid">1</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    <div style="border-bottom: 1px solid var(--box-border-color);">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5060390720525238"
+     crossorigin="anonymous"></script>
+<ins class="adsbygoogle"
+     style="display: block; height: 72px;"
+     data-ad-format="fluid"
+     data-ad-layout-key="-hh-7+2h-1m-4u"
+     data-ad-client="ca-pub-5060390720525238"
+     data-ad-slot="8126790508"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+</div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/admirez"><img src="https://cdn.v2ex.com/avatar/cbc3/d8b7/259219_normal.png?m=1625967253" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="admirez" data-uid="259219" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1209532#reply7" class="topic-link" id="topic-link-1209532">有准确绘制缠论中枢的 Python 代码借鉴么</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>admirez</strong> &nbsp;•&nbsp; 9 characters &nbsp;•&nbsp; 24744 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1209532#reply7" class="count_livid">7</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/565784135"><img src="https://cdn.v2ex.com/avatar/7f04/f9e4/409917_normal.png?m=1780045851" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="565784135" data-uid="409917" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1212876#reply4" class="topic-link" id="topic-link-1212876">9.9 元起！跨境卖家疯抢的纯净住宅 IP 辣椒 HTTP，到底有多香？</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>565784135</strong> &nbsp;•&nbsp; 2104 characters &nbsp;•&nbsp; 18985 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1212876#reply4" class="count_livid">4</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/bowenfu"><img src="https://cdn.v2ex.com/gravatar/182660a99413533242eab934e2b02161?s=24&d=retro" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="bowenfu" data-uid="265861" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1207844#reply0" class="topic-link" id="topic-link-1207844">做了一个面向张量计算的语言，可从 Python 调用，支持显式索引和自动求导</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>bowenfu</strong> &nbsp;•&nbsp; 854 characters &nbsp;•&nbsp; 18503 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/sunfinv"><img src="https://cdn.v2ex.com/gravatar/146e470f8688ae90a374cf3da251e0a5?s=24&d=retro" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="sunfinv" data-uid="547319" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1197162#reply72" class="topic-link" id="topic-link-1197162">分享一个完全免费的中国 A 股数据获取库</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>sunfinv</strong> &nbsp;•&nbsp; 892 characters &nbsp;•&nbsp; 21350 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1197162#reply72" class="count_livid">72</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/xFrank"><img src="https://cdn.v2ex.com/gravatar/edc8cef8925e056a5cb3e532a12c97f8?s=24&d=retro" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="xFrank" data-uid="138336" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1202699#reply43" class="topic-link" id="topic-link-1202699">发现 Python 一个有意思的小特性，发现很合适搞成面试题。问了 AI 都不行:)，欢迎来挑战~</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>xFrank</strong> &nbsp;•&nbsp; 376 characters &nbsp;•&nbsp; 19694 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1202699#reply43" class="count_livid">43</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/Junian"><img src="https://cdn.v2ex.com/avatar/1144/32aa/332855_normal.png?m=1780296210" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="Junian" data-uid="332855" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1206122#reply17" class="topic-link" id="topic-link-1206122">把电脑伪装成电视，用 DLNA 投屏拿到视频号直播流地址</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>Junian</strong> &nbsp;•&nbsp; 556 characters &nbsp;•&nbsp; 18111 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1206122#reply17" class="count_livid">17</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/KingZZZZ"><img src="https://cdn.v2ex.com/avatar/790c/1ff3/525929_normal.png?m=1713402403" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="KingZZZZ" data-uid="525929" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1204542#reply17" class="topic-link" id="topic-link-1204542">爬虫开发工作中，你们是如何基于 AI 进行提效的？</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>KingZZZZ</strong> &nbsp;•&nbsp; 62 characters &nbsp;•&nbsp; 16905 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1204542#reply17" class="count_livid">17</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    <div style="border-bottom: 1px solid var(--box-border-color);">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5060390720525238"
+     crossorigin="anonymous"></script>
+<ins class="adsbygoogle"
+     style="display: block; height: 72px;"
+     data-ad-format="fluid"
+     data-ad-layout-key="-hh-7+2h-1m-4u"
+     data-ad-client="ca-pub-5060390720525238"
+     data-ad-slot="8126790508"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+</div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/shadowmeld"><img src="https://cdn.v2ex.com/gravatar/1505c2d747d4973cd2d425518d573517?s=24&d=retro" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="shadowmeld" data-uid="638996" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1201368#reply18" class="topic-link" id="topic-link-1201368">大型 Python 开源项目都不会对变量进行类型注解？</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>shadowmeld</strong> &nbsp;•&nbsp; 147 characters &nbsp;•&nbsp; 15993 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1201368#reply18" class="count_livid">18</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/programMrxu"><img src="https://cdn.v2ex.com/avatar/3681/f0ad/481564_normal.png?m=1735196118" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="programMrxu" data-uid="481564" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1200848#reply0" class="topic-link" id="topic-link-1200848">使用 pycharm 开发 Python ，自定义代码风格，并实时提示</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>programMrxu</strong> &nbsp;•&nbsp; 139 characters &nbsp;•&nbsp; 14397 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/Deteriorator"><img src="https://cdn.v2ex.com/gravatar/ae89116bc2f881a5488ac50bf9b1f8ea?s=24&d=retro" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="Deteriorator" data-uid="255908" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1199608#reply13" class="topic-link" id="topic-link-1199608">慎用 PyCharm Remote Development 功能</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>Deteriorator</strong> &nbsp;•&nbsp; 355 characters &nbsp;•&nbsp; 13034 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1199608#reply13" class="count_livid">13</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/GPLer"><img src="https://cdn.v2ex.com/gravatar/d157c8c4ad24344ad27169d12b516d0c?s=24&d=retro" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="GPLer" data-uid="353984" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1199650#reply7" class="topic-link" id="topic-link-1199650">创造了 uv 的 Astral 公司被 OpenAI 收购</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>GPLer</strong> &nbsp;•&nbsp; 158 characters &nbsp;•&nbsp; 11475 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1199650#reply7" class="count_livid">7</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/zxccv1876"><img src="https://cdn.v2ex.com/gravatar/6a6e625d7b2cb16f79ca16f6c521b6f0?s=24&d=retro" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="zxccv1876" data-uid="547191" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1199233#reply10" class="topic-link" id="topic-link-1199233">Python 3.15 JIT 的最新进展，已经有大概 5%的性能提升了</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>zxccv1876</strong> &nbsp;•&nbsp; 60 characters &nbsp;•&nbsp; 11794 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1199233#reply10" class="count_livid">10</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/leemysw"><img src="https://cdn.v2ex.com/gravatar/d10bea99ac4423d1aa721f74b3b33e2e?s=24&d=retro" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="leemysw" data-uid="329464" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1198963#reply5" class="topic-link" id="topic-link-1198963">[开源] 做了个 feishu-docx，把飞书知识库变成 AI 更容易读写和管理的内容源，方便给 Agent 用</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>leemysw</strong> &nbsp;•&nbsp; 739 characters &nbsp;•&nbsp; 11320 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1198963#reply5" class="count_livid">5</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/mrytsr"><img src="https://cdn.v2ex.com/gravatar/29309537930f2a03c134f410d75ec86e?s=24&d=retro" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="mrytsr" data-uid="47537" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1198097#reply0" class="topic-link" id="topic-link-1198097">开源项目： clawOS 解决 openclaw 文件系统，一键安装</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>mrytsr</strong> &nbsp;•&nbsp; 422 characters &nbsp;•&nbsp; 8660 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    
+    <div class="cell">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="24" valign="top"><a href="/member/sunfinv"><img src="https://cdn.v2ex.com/gravatar/146e470f8688ae90a374cf3da251e0a5?s=24&d=retro" class="avatar" border="0" align="default" width="24" style="width: 24px; max-height: 24px;" alt="sunfinv" data-uid="547319" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle"><span class="item_title"><a href="/t/1197248#reply1" class="topic-link" id="topic-link-1197248">我用免费 A 股数据做了几个工具，欢迎一起开源！</a></span>
+                <div class="sep5"></div>
+                <span class="small fade"><strong>sunfinv</strong> &nbsp;•&nbsp; 864 characters &nbsp;•&nbsp; 8016 views</span>
+                </td>
+                <td width="50" align="right" valign="middle">
+                    
+                    <a href="/t/1197248#reply1" class="count_livid">1</a>
+                    
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    <div style="border-bottom: 1px solid var(--box-border-color);">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5060390720525238"
+     crossorigin="anonymous"></script>
+<ins class="adsbygoogle"
+     style="display: block; height: 72px;"
+     data-ad-format="fluid"
+     data-ad-layout-key="-hh-7+2h-1m-4u"
+     data-ad-client="ca-pub-5060390720525238"
+     data-ad-slot="8126790508"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+</div>
+    
+    
+    <div class="inner">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="120" align="left"><input type="button" onclick="location.href = '/go/python?p=1'" value="‹ Previous Page" class="super normal button" /></td>
+                <td width="auto" align="center"><strong class="fade">2/815</strong></td>
+                <td width="120" align="right"><input type="button" onclick="location.href = '/go/python?p=3';" value="Next Page ›" class="super normal button" /></td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div class="sep"></div>
+<div class="box">
+    <div class="pro-unit-title">节点订阅方式</div>
+    <div class="cell" style="padding: 8px; line-height: 100%;">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="28"><a href="/feed/python.xml"><img src="/static/img/planet/rss512.png" width="28" border="0" style="border-radius: 4px; vertical-align: bottom;" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle" align="left"><a href="/feed/python.xml">RSS</a></td>
+                <td width="16" valign="middle" align="right"><a href="javascript:copyToClipboard(window.location.origin + '/feed/python.xml')" title="复制 RSS 地址"><img src="/static/img/copy.svg" alt="copy RSS feed" align="absmiddle" width="16" /></a></td>
+            </tr>
+        </table>
+    </div>
+    <div class="cell" style="padding: 8px; line-height: 100%;">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="28"><a href="/feed/python.json"><img src="/static/img/json-feed.png" width="28" border="0" style="border-radius: 4px; vertical-align: bottom;" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle" align="left"><a href="/feed/python.json">JSON Feed</a></td>
+                <td width="16" valign="middle" align="right"><a href="javascript:copyToClipboard(window.location.origin + '/feed/python.json')" title="复制 JSON Feed 地址"><img src="/static/img/copy.svg" alt="copy JSON feed" align="absmiddle" width="16" /></a></td>
+            </tr>
+        </table>
+    </div>
+    <div class="cell" style="padding: 8px; line-height: 100%;">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="28"><a href="/planet/about"><img src="/static/img/planet/planet128.png" width="28" border="0" style="vertical-align: bottom;" /></a></td>
+                <td width="10"></td>
+                <td width="auto" valign="middle" align="left"><a href="/planet/about">使用 Planet 订阅节点更新</a></td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div class="sep"></div>
+        <div class="box">
+            <div class="inner" id="node_sidebar">
+                <strong class="green">推荐学习书目</strong>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://learnpythonthehardway.org/book/" target="_blank">Learn Python the Hard Way</a>
+<div class="sep10"></div>
+<strong class="fade">Python Sites</strong>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://pypi.python.org/pypi" target="_blank"><strong>PyPI</strong> - Python Package Index</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://diveintopython.org/toc/index.html" target="_blank">http://diveintopython.org/toc/index.html</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://www.pocoo.org/" target="_blank">Pocoo</a>
+<div class="sep10"></div>
+<strong class="green">值得关注的项目</strong>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://www.pypy.org/" target="_blank">PyPy</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://celeryproject.org/" target="_blank">Celery</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://jinja.pocoo.org/docs/" target="_blank">Jinja2</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://www.readthedocs.org/" target="_blank">Read the Docs</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://www.gevent.org/" target="_blank">gevent</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="https://github.com/yyuu/pyenv" target="_blank">pyenv</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://www.virtualenv.org/" target="_blank">virtualenv</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://www.stackless.com/" target="_blank">Stackless Python</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://www.crummy.com/software/BeautifulSoup/" target="_blank">Beautiful Soup</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="https://github.com/fxsjy/jieba" target="_blank">结巴中文分词</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://www.gunicorn.org/" target="_blank">Green Unicorn</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="https://getsentry.com/signup/r_D0rG/" target="_blank">Sentry</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="https://github.com/seomoz/shovel" target="_blank">Shovel</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="https://github.com/pyflakes/pyflakes/" target="_blank">Pyflakes</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="https://www.pytest.org/" target="_blank">pytest</a>
+<div class="sep10"></div>
+<strong class="green">Python 编程</strong>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://pypi.python.org/pypi/pep8" target="_blank">pep8 Checker</a>
+<div class="sep10"></div>
+<strong class="green">Styles</strong>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://www.python.org/dev/peps/pep-0008/" target="_blank">PEP 8</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="https://google.github.io/styleguide/pyguide.html" target="_blank">Google Python Style Guide</a>
+<div class="sep5"></div>
+<span class="chevron">›</span> <a href="http://docs.python-guide.org/en/latest/writing/style/" target="_blank">Code Style from The Hitchhiker's Guide</a>
+<style type="text/css">
+#Wrapper {
+background-color: #386d97;
+background-image: url("/static/img/shadow_light.png"), url("//static.v2ex.com/bgs/pixels.png");
+background-position: 0 0, 0 0;
+background-repeat: repeat-x, repeat;
+}
+</style>
+                
+            </div>
+            
+        </div>
+<style type="text/css">
+
+.node-header > .page-content-header {
+    background-color: #001D25;
+}
+
+
+
+.node-header > .page-content-header a {
+    color: #03C8FF;
+}
+
+
+
+.node-header > .page-content-header a:hover {
+    color: #03C8FF;
+}
+
+
+</style>
+
+
+        </div>
+    </div>
+    <div id="Bottom">
+        <div class="content">
+            <div class="inner">
+                <div class="fr"><strong><a href="/about" class="dark">About</a> &nbsp;·&nbsp; <a href="/select/language" title="Select Language" class="dark">Language</a></strong></div>
+                &copy; 2026 V2EX · 481ms · 3.9.8.5
+            </div>
+        </div>
+    </div>
+    <div class="box" id="pro-campaign-container">
+    <!-- Campaign content will be loaded here -->
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function safeHttpsUrl(url) {
+        if (url === null || url === undefined) return '';
+        var value = String(url);
+        if (!/^https:\/\//i.test(value)) return '';
+        try {
+            var parsed = new URL(value);
+            if (parsed.protocol !== 'https:') return '';
+            return parsed.href;
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function safeMemberUsername(username) {
+        if (username === null || username === undefined) return '';
+        username = String(username);
+        if (!/^[A-Za-z0-9_-]+$/.test(username)) return '';
+        return username;
+    }
+
+    function bindCampaignLinks(container) {
+        var items = container.querySelectorAll('[data-pro-link]');
+        for (var i = 0; i < items.length; i++) {
+            items[i].addEventListener('click', function() {
+                var link = this.getAttribute('data-pro-link');
+                if (link) {
+                    window.open(link, '_blank', 'noopener');
+                }
+            });
+        }
+    }
+
+    function renderCampaign(campaign) {
+        let html = '';
+        let displayFormat = campaign.display_format || 'text-only';
+        let linkUrl = safeHttpsUrl(campaign.link);
+        if (!linkUrl) return '';
+
+        let title = escapeHtml(campaign.title);
+        let description = escapeHtml(campaign.description);
+        let callToAction = escapeHtml(campaign.call_to_action);
+        let link = escapeHtml(linkUrl);
+        let imgSmallUrl = safeHttpsUrl(campaign.img_small_url);
+        let imgBannerUrl = safeHttpsUrl(campaign.img_banner_url);
+        let imgBigUrl = safeHttpsUrl(campaign.img_big_url);
+        let memberUsername = safeMemberUsername(campaign.member && campaign.member.username);
+        let promotedBy = memberUsername ? `Promoted by <a href="/member/${encodeURIComponent(memberUsername)}" target="_blank" rel="noopener noreferrer">${escapeHtml(memberUsername)}</a>` : 'Promoted by V2EX member';
+
+        if (displayFormat === 'small-with-description' && !imgSmallUrl) {
+            displayFormat = 'text-only';
+        } else if (displayFormat === 'banner-only' && !imgBannerUrl) {
+            displayFormat = 'text-only';
+        } else if ((displayFormat === 'big-only' || displayFormat === 'big-with-description' || displayFormat === 'big-with-title-description-button') && !imgBigUrl) {
+            displayFormat = 'text-only';
+        }
+
+        html = `<div class="pro-unit-title">${title}</div>`;
+        switch(displayFormat) {
+            case 'text-only':
+                html += `
+                    <div class="pro-unit">
+                    <div class="pro-unit-description flex-one-row gap10">
+                        <div data-pro-link="${link}">${description}</div>
+                        <div><a href="${link}" class="pro-unit-go" target="_blank" rel="noopener noreferrer">›</a>
+                        </div>
+                    </div>
+                    </div>
+                `;
+                break;
+
+            case 'small-with-description':
+                html += `<div class="pro-unit flex-one-row">
+                    ${imgSmallUrl ? `<div class="pro-unit-small-image">
+                        <a href="${link}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(imgSmallUrl)}" class="pro-unit-img" style="max-width: 130px; max-height: 100px;" alt="" /></a>
+                    </div>` : ''}
+                    <div data-pro-link="${link}" class="pro-unit-description">${description}</div>
+                </div>`;
+                break;
+
+            case 'banner-only':
+                html += `<div class="tight"><a href="${link}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(imgBannerUrl)}" class="pro-unit-img" style="max-width: 100%; display: block; vertical-align: bottom;" alt="" /></a></div>`;
+                break;
+
+            case 'big-only':
+                html += `<div class="tight"><a href="${link}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(imgBigUrl)}" class="pro-unit-img" style="max-width: 100%; max-height: 500px; width: 100%; display: block; vertical-align: bottom;" alt="" /></a></div>`;
+                break;
+
+            case 'big-with-description':
+                html += `<div class="inner" style="padding-bottom: 0px;"><a href="${link}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(imgBigUrl)}" class="pro-unit-img" style="max-width: 500px; max-height: 500px; width: 100%; display: block; vertical-align: bottom;" alt="" /></a></div>`;
+                html += `<div class="pro-unit-description flex-one-row gap10">
+                    <div data-pro-link="${link}">${description}</div>
+                    <div><a href="${link}" class="pro-unit-go" target="_blank" rel="noopener noreferrer">›</a></div></div>`;
+                break;
+
+            case 'big-with-title-description-button':
+                html += `<div class="inner" style="padding-bottom: 0px;"><a href="${link}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(imgBigUrl)}" class="pro-unit-img" style="max-width: 500px; max-height: 500px; width: 100%; display: block; vertical-align: bottom;" alt="" /></a></div>`;
+                html += `<div class="pro-unit-description">
+                    <div style="text-align: center" data-pro-link="${link}">${description}</div>
+                    </div>`;
+                html += `<div class="pro-unit-cta-container" style="text-align: center;"><a href="${link}" target="_blank" rel="noopener noreferrer" class="pro-unit-cta">${callToAction}</a></div>`;
+                break;
+
+            default:
+                html += `
+                    <div class="pro-unit-description flex-one-row gap10">
+                        <div data-pro-link="${link}">${description}</div>
+                        <div><a href="${link}" class="pro-unit-go" target="_blank" rel="noopener noreferrer">›</a></div>
+                    </div>
+                `;
+        }
+
+        html += `<div class="pro-unit-from flex-one-row gap10">
+        <div>${promotedBy}</div>
+        <div><a href="/pro/about" target="_blank" rel="noopener noreferrer" class="fade"><i class="fa fa-question-circle fade"></i> <span style="font-size: 12px; color: var(--color-fade)">PRO</span></a></div>
+        </div>`
+
+        return html;
+    }
+
+    // Load campaign from emitter
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/pro/emitter?mobile=1', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                try {
+                    var campaign = JSON.parse(xhr.responseText);
+                    if (campaign && campaign.id) {
+                        var html = renderCampaign(campaign);
+                        var container = document.getElementById('pro-campaign-container');
+                        if (html) {
+                            container.innerHTML = html;
+                            bindCampaignLinks(container);
+                        } else {
+                            container.style.display = 'none';
+                        }
+                    } else {
+                        document.getElementById('pro-campaign-container').style.display = 'none';
+                    }
+                } catch (e) {
+                    document.getElementById('pro-campaign-container').style.display = 'none';
+                    console.log('Error parsing campaign data: ' + e.message);
+                }
+            } else {
+                document.getElementById('pro-campaign-container').style.display = 'none';
+                console.log('Error loading campaign: HTTP ' + xhr.status);
+            }
+        }
+    };
+
+    xhr.send();
+});
+</script>
+    
+    <script src="/b/i/EupHDp3RZ6PPAkVEFQ1H8tJRdf5vbw3kV7EHyGvdP0-kF60llreDejOZyjD1oHWxs3JBLGPwmvI3VF380hYpKnbuHEhZbPOUwW-U7sb8NTJuq66_NBEnk07mbGX8UVPGwO31Lz9rTriSKG8hVWF4YlwMZ9iazBqpn9jkJ1U2GG2Q5S1skM4saELpeK_ZraSx"></script>
+    
+    
+    <script>
+	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+	  ga('create', 'UA-11940834-2', 'v2ex.com');
+	  ga('send', 'pageview');
+
+	</script>
+    
+<button class="scroll-top" data-scroll="up" type="button"><span>❯<span></button>
+</body>
+</html>
