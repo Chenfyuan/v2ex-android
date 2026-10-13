@@ -1,12 +1,50 @@
 package com.tavi.v2ex.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.util.fastCoerceIn
+import androidx.compose.ui.util.fastRoundToInt
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.isRenderEffectSupported
+import com.kyant.backdrop.shadow.InnerShadow
+import com.kyant.backdrop.shadow.Shadow
+import com.kyant.shapes.Capsule
+import com.tavi.v2ex.ui.glass.DampedDragAnimation
+import com.tavi.v2ex.ui.glass.InteractiveHighlight
+import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.abs
+import kotlin.math.sign
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -34,18 +72,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import com.tavi.v2ex.data.*
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private data class Dest(val tab: HomeTab, val selected: ImageVector, val unselected: ImageVector)
 
@@ -56,10 +99,9 @@ private fun destFor(tab: HomeTab) = when (tab) {
     HomeTab.LIBRARY -> Dest(tab, Icons.Filled.Bookmarks, Icons.Outlined.Bookmarks)
 }
 
-private val FloatingBarReserve = 88.dp
+private val FloatingBarReserve = 96.dp
 
 class HomeState(initialTabs: List<HomeTab>, val initialPage: Int) {
-    val haze = HazeState()
     val hot = Loadable<List<Topic>>()
     val latest = Loadable<List<Topic>>()
     val nodes = Loadable<List<Node>>()
@@ -72,7 +114,6 @@ class HomeState(initialTabs: List<HomeTab>, val initialPage: Int) {
     var latestMoreError by mutableStateOf<String?>(null)
 }
 
-/** 最新：网页增强时走 /recent?p=N，失败回退 latest.json */
 fun loadLatest(s: HomeState, nav: Navigator, entry: Entry, force: Boolean) {
     entry.scope.load(s.latest, force) {
         s.latestMoreError = null
@@ -134,8 +175,10 @@ fun HomeScreen(nav: Navigator, entry: Entry) {
     }
     val scope = rememberCoroutineScope()
     val title = s.tabs.getOrNull(pager.currentPage)?.label ?: "V2EX"
+    val backdrop = rememberLayerBackdrop()
     Box(Modifier.fillMaxSize()) {
         Scaffold(
+            modifier = Modifier.layerBackdrop(backdrop),
             contentWindowInsets = WindowInsets(0),
             topBar = {
                 TopAppBar(
@@ -156,7 +199,7 @@ fun HomeScreen(nav: Navigator, entry: Entry) {
         ) { pad ->
             HorizontalPager(
                 state = pager,
-                modifier = Modifier.padding(pad).fillMaxSize().hazeSource(s.haze),
+                modifier = Modifier.padding(pad).fillMaxSize(),
                 beyondViewportPageCount = 1,
                 userScrollEnabled = true,
                 key = { s.tabs.getOrNull(it)?.id ?: it },
@@ -186,140 +229,230 @@ fun HomeScreen(nav: Navigator, entry: Entry) {
         FloatingBottomBar(
             tabs = s.tabs,
             selected = pager.currentPage.coerceIn(0, (s.tabs.size - 1).coerceAtLeast(0)),
-            pageOffset = pager.currentPage + pager.currentPageOffsetFraction,
-            haze = s.haze,
+            pageOffset = { pager.currentPage + pager.currentPageOffsetFraction },
+            backdrop = backdrop,
             onSelect = { i -> scope.launch { pager.animateScrollToPage(i) } },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }
 
+/**
+ * iOS 26 风格液态玻璃底栏，基于 Kyant0/AndroidLiquidGlass（backdrop）的 LiquidBottomTabs 示例改编。
+ * - 整条胶囊：vibrancy + blur + lens 折射背后内容
+ * - 选中胶囊：包住整个「图标+文字」，可按住拖动，松手吸附；与 Pager 滑动同步
+ * - API 31 以下无 RenderEffect：自动退化为半透明实色底 + 普通选中胶囊
+ */
 @Composable
 fun FloatingBottomBar(
     tabs: List<HomeTab>,
     selected: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    pageOffset: Float = selected.toFloat(),
-    haze: HazeState? = null,
+    pageOffset: () -> Float = { selected.toFloat() },
+    backdrop: Backdrop? = null,
 ) {
-    val cs = MaterialTheme.colorScheme
-    val dark = cs.surface.luminance() < 0.5f
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    // 更接近 iOS Liquid Glass 的大圆角胶囊
-    val shape = RoundedCornerShape(36.dp)
-    // 更透、更糊：亮色偏白玻璃，暗色偏深玻璃
-    val tint = if (dark) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.28f)
-    val tint2 = if (dark) cs.surface.copy(alpha = 0.35f) else cs.surface.copy(alpha = 0.22f)
-    val fallback = if (dark) Color(0xE61C1C1E) else Color(0xE6F2F2F7)
-    val glassModifier = if (haze != null) Modifier.hazeEffect(haze) {
-        blurRadius = 52.dp
-        tints = listOf(HazeTint(tint), HazeTint(tint2))
-        noiseFactor = 0.06f
-        fallbackTint = HazeTint(fallback)
-    } else Modifier.background(fallback)
-
-    var dragAcc by remember { mutableFloatStateOf(0f) }
-    val density = androidx.compose.ui.platform.LocalDensity.current
-
-    Box(
-        modifier
-            .fillMaxWidth()
-            .padding(start = 18.dp, end = 18.dp, bottom = 14.dp + bottomInset)
-            // 外层柔光，模拟玻璃浮在内容上方
-            .shadow(
-                elevation = 24.dp,
-                shape = shape,
-                ambientColor = Color.Black.copy(alpha = if (dark) 0.45f else 0.18f),
-                spotColor = Color.Black.copy(alpha = if (dark) 0.55f else 0.22f),
-            )
-            .clip(shape)
-            .then(glassModifier)
-            // 顶部强高光 + 底部微暗，镜面反射
-            .background(
-                Brush.verticalGradient(
-                    0f to Color.White.copy(alpha = if (dark) 0.22f else 0.55f),
-                    0.18f to Color.White.copy(alpha = if (dark) 0.06f else 0.18f),
-                    0.55f to Color.Transparent,
-                    1f to Color.Black.copy(alpha = if (dark) 0.18f else 0.04f),
-                ),
-            )
-            // 细霜边：上亮下淡
-            .border(
-                width = 0.8.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = if (dark) 0.55f else 0.95f),
-                        Color.White.copy(alpha = if (dark) 0.12f else 0.35f),
-                        Color.White.copy(alpha = if (dark) 0.05f else 0.15f),
-                    ),
-                ),
-                shape = shape,
-            )
-            // 内圈淡描边，加强「玻璃边缘」
-            .padding(0.6.dp)
-            .border(
-                width = 0.5.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = if (dark) 0.25f else 0.5f),
-                        Color.Transparent,
-                    ),
-                ),
-                shape = RoundedCornerShape(35.dp),
-            )
-            // 在底栏上横滑也可切页（与内容 pager 同步）
-            .pointerInput(tabs.size, selected) {
-                detectHorizontalDragGestures(
-                    onDragEnd = {
-                        val threshold = with(density) { 48.dp.toPx() }
-                        when {
-                            dragAcc <= -threshold && selected < tabs.lastIndex -> onSelect(selected + 1)
-                            dragAcc >= threshold && selected > 0 -> onSelect(selected - 1)
-                        }
-                        dragAcc = 0f
-                    },
-                    onDragCancel = { dragAcc = 0f },
-                    onHorizontalDrag = { _, dx -> dragAcc += dx },
-                )
-            },
-    ) {
-        NavigationBar(
-            containerColor = Color.Transparent,
-            tonalElevation = 0.dp,
-            windowInsets = WindowInsets(0),
-            modifier = Modifier.height(66.dp),
+    val bd = backdrop ?: rememberLayerBackdrop()
+    Box(modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 14.dp + bottomInset)) {
+        LiquidTabs(
+            selectedTabIndex = { selected },
+            pageOffset = pageOffset,
+            onTabSelected = onSelect,
+            backdrop = bd,
+            tabsCount = tabs.size.coerceAtLeast(1),
         ) {
+            val cs = MaterialTheme.colorScheme
             tabs.forEachIndexed { i, tab ->
                 val d = destFor(tab)
-                val selectedness = (1f - kotlin.math.abs(pageOffset - i)).coerceIn(0f, 1f)
-                NavigationBarItem(
-                    selected = selected == i,
-                    onClick = { onSelect(i) },
-                    icon = {
-                        Icon(
-                            if (selected == i) d.selected else d.unselected,
-                            contentDescription = tab.label,
-                            modifier = Modifier.graphicsLayer {
-                                val sc = 0.92f + 0.08f * selectedness
-                                scaleX = sc; scaleY = sc
-                            },
-                        )
-                    },
-                    label = { Text(tab.label) },
-                    alwaysShowLabel = true,
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = cs.primary.copy(alpha = if (dark) 0.28f else 0.18f),
-                        selectedIconColor = cs.primary,
-                        selectedTextColor = cs.primary,
-                        unselectedIconColor = cs.onSurface.copy(alpha = 0.55f),
-                        unselectedTextColor = cs.onSurface.copy(alpha = 0.55f),
-                    ),
-                )
+                LiquidTab(onClick = { onSelect(i) }) {
+                    Icon(if (selected == i) d.selected else d.unselected, tab.label, tint = cs.onSurface, modifier = Modifier.size(24.dp))
+                    Text(tab.label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium, color = cs.onSurface, maxLines = 1)
+                }
             }
         }
     }
 }
+
+private val LocalTabScale = staticCompositionLocalOf { { 1f } }
+
+@Composable
+private fun RowScope.LiquidTab(onClick: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val scale = LocalTabScale.current
+    Column(
+        Modifier
+            .clip(Capsule())
+            .clickable(interactionSource = null, indication = null, role = Role.Tab, onClick = onClick)
+            .fillMaxHeight()
+            .weight(1f)
+            .graphicsLayer { val s = scale(); scaleX = s; scaleY = s },
+        verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        content = content,
+    )
+}
+
+@Composable
+private fun LiquidTabs(
+    selectedTabIndex: () -> Int,
+    pageOffset: () -> Float,
+    onTabSelected: (Int) -> Unit,
+    backdrop: Backdrop,
+    tabsCount: Int,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val accent = if (dark) Color(0xFF0091FF) else Color(0xFF0088FF)
+    val supported = isRenderEffectSupported()
+    val container = if (dark) Color(0xFF121212).copy(if (supported) 0.4f else 0.92f)
+    else Color(0xFFFAFAFA).copy(if (supported) 0.4f else 0.94f)
+    val tabsBackdrop = rememberLayerBackdrop()
+
+    BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+        val density = LocalDensity.current
+        val maxW = constraints.maxWidth.toFloat()
+        val tabWidth = with(density) { (maxW - 8.dp.toPx()) / tabsCount }
+        val offsetAnimation = remember { Animatable(0f) }
+        val panelOffset by remember(density, maxW) {
+            derivedStateOf {
+                val f = (offsetAnimation.value / maxW).fastCoerceIn(-1f, 1f)
+                with(density) { 4.dp.toPx() * f.sign * EaseOut.transform(abs(f)) }
+            }
+        }
+        val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
+        val animationScope = rememberCoroutineScope()
+        var currentIndex by remember { mutableIntStateOf(selectedTabIndex()) }
+        var dragging by remember { mutableStateOf(false) }
+        val last = (tabsCount - 1).toFloat().coerceAtLeast(0.0001f)
+        val damped = remember(animationScope, tabsCount) {
+            DampedDragAnimation(
+                animationScope = animationScope,
+                initialValue = selectedTabIndex().toFloat(),
+                valueRange = 0f..last,
+                visibilityThreshold = 0.001f,
+                initialScale = 1f,
+                pressedScale = 78f / 56f,
+                onDragStarted = { dragging = true },
+                onDragStopped = {
+                    val target = targetValue.fastRoundToInt().fastCoerceIn(0, tabsCount - 1)
+                    dragging = false
+                    currentIndex = target
+                    animateToValue(target.toFloat())
+                    onTabSelected(target)
+                    animationScope.launch { offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f)) }
+                },
+                onDrag = { _, drag ->
+                    updateValue((targetValue + drag.x / tabWidth * if (isLtr) 1f else -1f).fastCoerceIn(0f, last))
+                    animationScope.launch { offsetAnimation.snapTo(offsetAnimation.value + drag.x) }
+                },
+            )
+        }
+        LaunchedEffect(damped) {
+            snapshotFlow { selectedTabIndex() }.collectLatest { i ->
+                if (i != currentIndex) { currentIndex = i; if (!dragging) damped.animateToValue(i.toFloat()) }
+            }
+        }
+        LaunchedEffect(damped) {
+            snapshotFlow { pageOffset() }.collectLatest { p ->
+                if (!dragging && abs(p - p.fastRoundToInt()) > 0.001f) damped.updateValue(p)
+            }
+        }
+        val highlight = remember(animationScope, damped) {
+            InteractiveHighlight(animationScope = animationScope, position = { size, _ ->
+                Offset(
+                    if (isLtr) (damped.value + 0.5f) * tabWidth + panelOffset
+                    else size.width - (damped.value + 0.5f) * tabWidth + panelOffset,
+                    size.height / 2f,
+                )
+            })
+        }
+
+        Row(
+            Modifier
+                .graphicsLayer { translationX = panelOffset }
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { Capsule() },
+                    effects = { vibrancy(); blur(8.dp.toPx()); lens(24.dp.toPx(), 24.dp.toPx()) },
+                    layerBlock = {
+                        val s = lerp(1f, 1f + 16.dp.toPx() / size.width, damped.pressProgress)
+                        scaleX = s; scaleY = s
+                    },
+                    shadow = { Shadow(alpha = if (dark) 0.6f else 0.25f) },
+                    onDrawSurface = { drawRect(container) },
+                )
+                .then(highlight.modifier)
+                .height(64.dp)
+                .fillMaxWidth()
+                .padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            content = content,
+        )
+
+        CompositionLocalProvider(LocalTabScale provides { lerp(1f, 1.2f, damped.pressProgress) }) {
+            Row(
+                Modifier
+                    .clearAndSetSemantics {}
+                    .alpha(0f)
+                    .layerBackdrop(tabsBackdrop)
+                    .graphicsLayer { translationX = panelOffset }
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { Capsule() },
+                        effects = {
+                            val p = damped.pressProgress
+                            vibrancy(); blur(8.dp.toPx()); lens(24.dp.toPx() * p, 24.dp.toPx() * p)
+                        },
+                        highlight = { Highlight.Default.copy(alpha = damped.pressProgress) },
+                        onDrawSurface = { drawRect(container) },
+                    )
+                    .then(highlight.modifier)
+                    .height(56.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp)
+                    .graphicsLayer(colorFilter = ColorFilter.tint(accent)),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content,
+            )
+        }
+
+        Box(
+            Modifier
+                .padding(horizontal = 4.dp)
+                .graphicsLayer {
+                    translationX = if (isLtr) damped.value * tabWidth + panelOffset
+                    else size.width - (damped.value + 1f) * tabWidth + panelOffset
+                }
+                .then(highlight.gestureModifier)
+                .then(damped.modifier)
+                .drawBackdrop(
+                    backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
+                    shape = { Capsule() },
+                    effects = {
+                        val p = damped.pressProgress
+                        lens(10.dp.toPx() * p, 14.dp.toPx() * p, chromaticAberration = true)
+                    },
+                    highlight = { Highlight.Default.copy(alpha = damped.pressProgress) },
+                    shadow = { Shadow(alpha = damped.pressProgress) },
+                    innerShadow = { InnerShadow(radius = 8.dp * damped.pressProgress, alpha = damped.pressProgress) },
+                    layerBlock = {
+                        scaleX = damped.scaleX; scaleY = damped.scaleY
+                        val v = damped.velocity / 10f
+                        scaleX /= 1f - (v * 0.75f).fastCoerceIn(-0.2f, 0.2f)
+                        scaleY *= 1f - (v * 0.25f).fastCoerceIn(-0.2f, 0.2f)
+                    },
+                    onDrawSurface = {
+                        val p = damped.pressProgress
+                        drawRect(if (dark) Color.White.copy(0.1f) else Color.Black.copy(0.1f), alpha = 1f - p)
+                        drawRect(Color.Black.copy(alpha = 0.03f * p))
+                    },
+                )
+                .height(56.dp)
+                .fillMaxWidth(1f / tabsCount),
+        )
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -331,9 +464,11 @@ fun TopicListPane(
 ) {
     val data = l.data?.filterBlocked(blockedUsers, blockedNodes)
     if (paging != null) {
-        val atEnd by remember(state) { derivedStateOf {
-            (state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) >= state.layoutInfo.totalItemsCount - 4
-        } }
+        val atEnd by remember(state) {
+            derivedStateOf {
+                (state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) >= state.layoutInfo.totalItemsCount - 4
+            }
+        }
         LaunchedEffect(atEnd, paging.hasMore, paging.loading, paging.error, l.data?.size) {
             if (atEnd && paging.hasMore && !paging.loading && paging.error == null && l.data != null) paging.onMore()
         }
@@ -354,7 +489,10 @@ fun TopicListPane(
                         }
                         paging?.error != null -> ListEndFooter(paging.error, "重试", paging.onRetry)
                         paging?.hasMore == true -> ListEndFooter("继续上滑加载更多")
-                        else -> ListEndFooter("已显示全部 ${data?.size ?: 0} 条。V2EX 接口不支持继续翻页，下拉可刷新获取最新", "刷新", onRefresh)
+                        else -> ListEndFooter(
+                            "已显示全部 ${data?.size ?: 0} 条。V2EX 接口不支持继续翻页，下拉可刷新获取最新",
+                            "刷新", onRefresh,
+                        )
                     }
                 },
             )

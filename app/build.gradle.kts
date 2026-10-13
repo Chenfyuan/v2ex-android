@@ -14,8 +14,8 @@ android {
         applicationId = "com.tavi.v2ex"
         minSdk = 26
         targetSdk = 37
-        versionCode = 9
-        versionName = "0.4.1"
+        versionCode = 10
+        versionName = "0.4.2"
     }
     val signProps = Properties().apply {
         System.getenv("V2EX_SIGNING_PROPERTIES")?.let { file(it) }?.takeIf { it.isFile }?.inputStream()?.use { load(it) }
@@ -67,7 +67,8 @@ dependencies {
     implementation("androidx.room:room-ktx:2.8.5")
     ksp("androidx.room:room-compiler:2.8.5")
     implementation("org.jsoup:jsoup:1.21.2")
-    implementation("dev.chrisbanes.haze:haze:1.6.0")
+    implementation("io.github.kyant0:backdrop:2.0.1")
+    implementation("io.github.kyant0:shapes:1.2.1")
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
 

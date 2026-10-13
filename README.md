@@ -6,7 +6,7 @@
 
 ## 功能
 
-- **最热 / 最新 / 节点 / 收藏**：悬浮液态玻璃底栏；可在设置里调整顺序、默认标签，并把收藏放到底栏
+- **最热 / 最新 / 节点 / 收藏**：悬浮液态玻璃底栏（选中胶囊包住图标+文字，可按住拖动切换）；可在设置里调整顺序、默认标签，并把收藏放到底栏
 - **主题详情**：原生排版；只看楼主；跳楼；`@你` 高亮；**记住阅读位置**（再次打开回到上次楼层）
 - **收藏与历史**：本地收藏主题 / 节点，浏览历史；JSON 备份导入导出
 - **屏蔽**：屏蔽用户或节点后，列表里不再显示
@@ -67,12 +67,12 @@ V2EX_SIGNING_PROPERTIES=/path/to/signing.properties ./gradlew assembleRelease
 - 未填令牌时节点主题最多约 10 条
 - 官方无搜索 API
 - 「全部已读」为逐条删除提醒
-- 毛玻璃需 Android 12+
+- 液态玻璃底栏基于 [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass)（backdrop，Apache-2.0）：模糊需 Android 12+，透镜折射/高光需 Android 13+；更旧系统退化为半透明实色底栏，功能不变
 - 数据库升级使用破坏性迁移（清除本地收藏 / 历史以外的新表时请留意版本变更说明）
 
 ## 技术栈
 
-Kotlin · Jetpack Compose · Material 3 · Room · Coil · jsoup · Haze · SplashScreen
+Kotlin · Jetpack Compose · Material 3 · Room · Coil · jsoup · Kyant backdrop · SplashScreen
 
 ## 许可
 

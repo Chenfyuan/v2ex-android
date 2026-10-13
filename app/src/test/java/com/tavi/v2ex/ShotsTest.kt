@@ -4,7 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.remember
-import dev.chrisbanes.haze.hazeSource
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
@@ -26,7 +27,8 @@ private fun res(n: String) = ShotsTest::class.java.classLoader!!.getResource(n).
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "w400dp-h860dp-xxhdpi")
+// Robolectric 的 AGSL 不支持 backdrop 着色器，截图走 API 30 降级路径
+@Config(qualifiers = "w400dp-h860dp-xxhdpi", sdk = [30])
 class ShotsTest {
     @get:Rule val rule = createComposeRule()
     private val topics = JSONArray(res("hot.json")).objects().map(::parseTopic)
@@ -37,13 +39,13 @@ class ShotsTest {
         rule.setContent {
             AppTheme(if (dark) 2 else 1, dynamic = false) {
                 Box(Modifier.fillMaxSize()) {
-                    val haze = remember { dev.chrisbanes.haze.HazeState() }
+                    val haze = rememberLayerBackdrop()
                     Scaffold(topBar = { TopAppBar(title = { Text("最热") }) }) { p ->
-                        Box(Modifier.padding(p).fillMaxSize().hazeSource(haze)) {
+                        Box(Modifier.padding(p).fillMaxSize().layerBackdrop(haze)) {
                             TopicList(topics, LazyListState(), {}, {})
                         }
                     }
-                    FloatingBottomBar(tabs = listOf(com.tavi.v2ex.data.HomeTab.HOT, com.tavi.v2ex.data.HomeTab.LATEST, com.tavi.v2ex.data.HomeTab.NODES), selected = 0, onSelect = {}, modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter), haze = haze)
+                    FloatingBottomBar(tabs = listOf(com.tavi.v2ex.data.HomeTab.HOT, com.tavi.v2ex.data.HomeTab.LATEST, com.tavi.v2ex.data.HomeTab.NODES), selected = 0, onSelect = {}, modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter), backdrop = haze)
                 }
             }
         }
