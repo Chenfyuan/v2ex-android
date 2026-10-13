@@ -3,6 +3,10 @@ package com.tavi.v2ex.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -154,6 +158,7 @@ fun HomeScreen(nav: Navigator, entry: Entry) {
                 state = pager,
                 modifier = Modifier.padding(pad).fillMaxSize().hazeSource(s.haze),
                 beyondViewportPageCount = 1,
+                userScrollEnabled = true,
                 key = { s.tabs.getOrNull(it)?.id ?: it },
             ) { page ->
                 when (s.tabs.getOrNull(page)) {
@@ -181,6 +186,7 @@ fun HomeScreen(nav: Navigator, entry: Entry) {
         FloatingBottomBar(
             tabs = s.tabs,
             selected = pager.currentPage.coerceIn(0, (s.tabs.size - 1).coerceAtLeast(0)),
+            pageOffset = pager.currentPage + pager.currentPageOffsetFraction,
             haze = s.haze,
             onSelect = { i -> scope.launch { pager.animateScrollToPage(i) } },
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -194,59 +200,121 @@ fun FloatingBottomBar(
     selected: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    pageOffset: Float = selected.toFloat(),
     haze: HazeState? = null,
 ) {
     val cs = MaterialTheme.colorScheme
     val dark = cs.surface.luminance() < 0.5f
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val shape = RoundedCornerShape(28.dp)
-    val tint = cs.surfaceContainer.copy(alpha = if (dark) 0.55f else 0.62f)
-    val fallback = cs.surfaceContainer.copy(alpha = 0.94f)
+    // 更接近 iOS Liquid Glass 的大圆角胶囊
+    val shape = RoundedCornerShape(36.dp)
+    // 更透、更糊：亮色偏白玻璃，暗色偏深玻璃
+    val tint = if (dark) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.28f)
+    val tint2 = if (dark) cs.surface.copy(alpha = 0.35f) else cs.surface.copy(alpha = 0.22f)
+    val fallback = if (dark) Color(0xE61C1C1E) else Color(0xE6F2F2F7)
     val glassModifier = if (haze != null) Modifier.hazeEffect(haze) {
-        blurRadius = 28.dp
-        tints = listOf(HazeTint(tint))
-        noiseFactor = 0.04f
+        blurRadius = 52.dp
+        tints = listOf(HazeTint(tint), HazeTint(tint2))
+        noiseFactor = 0.06f
         fallbackTint = HazeTint(fallback)
     } else Modifier.background(fallback)
+
+    var dragAcc by remember { mutableFloatStateOf(0f) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+
     Box(
         modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, bottom = 12.dp + bottomInset)
-            .shadow(16.dp, shape, ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
+            .padding(start = 18.dp, end = 18.dp, bottom = 14.dp + bottomInset)
+            // 外层柔光，模拟玻璃浮在内容上方
+            .shadow(
+                elevation = 24.dp,
+                shape = shape,
+                ambientColor = Color.Black.copy(alpha = if (dark) 0.45f else 0.18f),
+                spotColor = Color.Black.copy(alpha = if (dark) 0.55f else 0.22f),
+            )
             .clip(shape)
             .then(glassModifier)
+            // 顶部强高光 + 底部微暗，镜面反射
             .background(
                 Brush.verticalGradient(
-                    0f to Color.White.copy(alpha = if (dark) 0.10f else 0.35f),
-                    0.45f to Color.White.copy(alpha = 0f),
+                    0f to Color.White.copy(alpha = if (dark) 0.22f else 0.55f),
+                    0.18f to Color.White.copy(alpha = if (dark) 0.06f else 0.18f),
+                    0.55f to Color.Transparent,
+                    1f to Color.Black.copy(alpha = if (dark) 0.18f else 0.04f),
                 ),
             )
+            // 细霜边：上亮下淡
             .border(
-                1.dp,
-                Brush.verticalGradient(
+                width = 0.8.dp,
+                brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = if (dark) 0.28f else 0.75f),
-                        Color.White.copy(alpha = if (dark) 0.06f else 0.20f),
+                        Color.White.copy(alpha = if (dark) 0.55f else 0.95f),
+                        Color.White.copy(alpha = if (dark) 0.12f else 0.35f),
+                        Color.White.copy(alpha = if (dark) 0.05f else 0.15f),
                     ),
                 ),
-                shape,
-            ),
+                shape = shape,
+            )
+            // 内圈淡描边，加强「玻璃边缘」
+            .padding(0.6.dp)
+            .border(
+                width = 0.5.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = if (dark) 0.25f else 0.5f),
+                        Color.Transparent,
+                    ),
+                ),
+                shape = RoundedCornerShape(35.dp),
+            )
+            // 在底栏上横滑也可切页（与内容 pager 同步）
+            .pointerInput(tabs.size, selected) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        val threshold = with(density) { 48.dp.toPx() }
+                        when {
+                            dragAcc <= -threshold && selected < tabs.lastIndex -> onSelect(selected + 1)
+                            dragAcc >= threshold && selected > 0 -> onSelect(selected - 1)
+                        }
+                        dragAcc = 0f
+                    },
+                    onDragCancel = { dragAcc = 0f },
+                    onHorizontalDrag = { _, dx -> dragAcc += dx },
+                )
+            },
     ) {
         NavigationBar(
             containerColor = Color.Transparent,
             tonalElevation = 0.dp,
             windowInsets = WindowInsets(0),
-            modifier = Modifier.height(64.dp),
+            modifier = Modifier.height(66.dp),
         ) {
             tabs.forEachIndexed { i, tab ->
                 val d = destFor(tab)
+                val selectedness = (1f - kotlin.math.abs(pageOffset - i)).coerceIn(0f, 1f)
                 NavigationBarItem(
                     selected = selected == i,
                     onClick = { onSelect(i) },
-                    icon = { Icon(if (selected == i) d.selected else d.unselected, contentDescription = tab.label) },
+                    icon = {
+                        Icon(
+                            if (selected == i) d.selected else d.unselected,
+                            contentDescription = tab.label,
+                            modifier = Modifier.graphicsLayer {
+                                val sc = 0.92f + 0.08f * selectedness
+                                scaleX = sc; scaleY = sc
+                            },
+                        )
+                    },
                     label = { Text(tab.label) },
                     alwaysShowLabel = true,
-                    colors = NavigationBarItemDefaults.colors(indicatorColor = cs.secondaryContainer.copy(alpha = 0.85f)),
+                    colors = NavigationBarItemDefaults.colors(
+                        indicatorColor = cs.primary.copy(alpha = if (dark) 0.28f else 0.18f),
+                        selectedIconColor = cs.primary,
+                        selectedTextColor = cs.primary,
+                        unselectedIconColor = cs.onSurface.copy(alpha = 0.55f),
+                        unselectedTextColor = cs.onSurface.copy(alpha = 0.55f),
+                    ),
                 )
             }
         }

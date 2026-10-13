@@ -43,7 +43,7 @@ class ShotsTest {
                             TopicList(topics, LazyListState(), {}, {})
                         }
                     }
-                    FloatingBottomBar(listOf(com.tavi.v2ex.data.HomeTab.HOT, com.tavi.v2ex.data.HomeTab.LATEST, com.tavi.v2ex.data.HomeTab.NODES), 0, {}, Modifier.align(androidx.compose.ui.Alignment.BottomCenter), haze)
+                    FloatingBottomBar(tabs = listOf(com.tavi.v2ex.data.HomeTab.HOT, com.tavi.v2ex.data.HomeTab.LATEST, com.tavi.v2ex.data.HomeTab.NODES), selected = 0, onSelect = {}, modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter), haze = haze)
                 }
             }
         }
