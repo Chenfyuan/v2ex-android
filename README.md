@@ -1,5 +1,7 @@
 # V2 阅读
 
+[![Android CI](https://github.com/Chenfyuan/v2ex-android/actions/workflows/android.yml/badge.svg)](https://github.com/Chenfyuan/v2ex-android/actions/workflows/android.yml)
+
 非官方 [V2EX](https://www.v2ex.com) Android 客户端。只读浏览主题、节点、用户和提醒，界面是 Material 3，带动态取色、深色模式和悬浮液态玻璃底栏。
 
 > 本项目与 V2EX 官方无关。数据全部来自 V2EX 公开接口，不抓网页登录，也不模拟发帖。
@@ -55,12 +57,18 @@
 - V2EX 未公开支持第三方读取网页；如被限制，请在设置关闭「网页增强翻页」
 - 「最热」仍只有官方的一页
 
-## 构建
+## 构建与发布
 
 ```bash
+./gradlew testDebugUnitTest      # 单元测试 + Roborazzi 截图（JDK 21）
 ./gradlew assembleDebug
-V2EX_SIGNING_PROPERTIES=/path/to/signing.properties ./gradlew assembleRelease
+# 正式包：签名配置只在本地，不进仓库、不进 GitHub Secrets
+V2EX_SIGNING_PROPERTIES=/path/to/signing.properties ./gradlew assembleRelease bundleRelease
 ```
+
+- **CI**：`.github/workflows/android.yml`，在 push / PR 到 master 时运行（ubuntu-24.04，JDK 21，Gradle 缓存）：lint（不阻断）→ 单元与截图测试 → assembleDebug，上传 debug APK、测试报告与截图作为 artifact。CI 不签名、不发 Release。
+- **正式发布**：本地用 release 签名构建 R8 混淆 + 资源压缩的 APK/AAB，手动创建 GitHub Release 并上传。
+- 截图测试中 Robolectric 不支持 AGSL，底栏走降级外观（与 Android 12 以下一致）。
 
 ## 已知限制
 
