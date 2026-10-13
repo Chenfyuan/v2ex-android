@@ -8,7 +8,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:enableOnBackInvokedCallback="true"
-        android:theme="@android:style/Theme.Material.NoActionBar">
+        android:theme="@style/Theme.V2Reader.Splash">
         <activity android:name=".MainActivity" android:exported="true"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop"

@@ -1,97 +1,109 @@
 package com.tavi.v2ex.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import com.tavi.v2ex.data.Node
-import com.tavi.v2ex.data.Topic
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.tavi.v2ex.data.*
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+import kotlinx.coroutines.launch
 
-private data class Dest(val label: String, val selected: ImageVector, val unselected: ImageVector)
+private data class Dest(val tab: HomeTab, val selected: ImageVector, val unselected: ImageVector)
 
-private val Destinations = listOf(
-    Dest("最热", Icons.Filled.LocalFireDepartment, Icons.Outlined.LocalFireDepartment),
-    Dest("最新", Icons.Filled.Schedule, Icons.Outlined.Schedule),
-    Dest("节点", Icons.Filled.GridView, Icons.Outlined.GridView),
-)
+private fun destFor(tab: HomeTab) = when (tab) {
+    HomeTab.HOT -> Dest(tab, Icons.Filled.LocalFireDepartment, Icons.Outlined.LocalFireDepartment)
+    HomeTab.LATEST -> Dest(tab, Icons.Filled.Schedule, Icons.Outlined.Schedule)
+    HomeTab.NODES -> Dest(tab, Icons.Filled.GridView, Icons.Outlined.GridView)
+    HomeTab.LIBRARY -> Dest(tab, Icons.Filled.Bookmarks, Icons.Outlined.Bookmarks)
+}
 
-/** 悬浮底栏外高：导航栏本体 + 上下边距，列表底部留白用 */
 private val FloatingBarReserve = 88.dp
 
-class HomeState {
+class HomeState(initialTabs: List<HomeTab>, val initialPage: Int) {
     val haze = HazeState()
     val hot = Loadable<List<Topic>>()
     val latest = Loadable<List<Topic>>()
     val nodes = Loadable<List<Node>>()
-    val lists = List(3) { LazyListState() }
-    val pager = PagerState { Destinations.size }
+    var tabs by mutableStateOf(initialTabs)
+    val lists = List(8) { LazyListState() }
     var query by mutableStateOf("")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(nav: Navigator, entry: Entry) {
-    val s = entry.state("home") { HomeState() }
+    val tabs = nav.prefs.homeTabs()
+    val s = entry.state("home") { HomeState(tabs, nav.prefs.defaultTabIndex().coerceIn(0, (tabs.size - 1).coerceAtLeast(0))) }
+    LaunchedEffect(nav.prefs.homeOrder) {
+        val neu = nav.prefs.homeTabs()
+        if (neu.map { it.id } != s.tabs.map { it.id }) s.tabs = neu
+    }
+    val pager = rememberPagerState(initialPage = s.initialPage) { s.tabs.size.coerceAtLeast(1) }
     val api = nav.api
+    val blockedUsers by nav.dao.blockedUsers().collectAsState(emptyList())
+    val blockedNodes by nav.dao.blockedNodes().collectAsState(emptyList())
+    val userSet = remember(blockedUsers) { blockedUsers.toSet() }
+    val nodeSet = remember(blockedNodes) { blockedNodes.map { it.name }.toSet() }
+
     LaunchedEffect(Unit) {
         if (s.hot.data == null) entry.scope.load(s.hot) { api.hot() }
         nav.refreshNoticeCount()
     }
-    LaunchedEffect(s.pager.currentPage) {
-        when (s.pager.currentPage) {
-            1 -> if (s.latest.data == null) entry.scope.load(s.latest) { api.latest() }
-            2 -> if (s.nodes.data == null) entry.scope.load(s.nodes) { api.allNodes() }
+    LaunchedEffect(pager.currentPage, s.tabs) {
+        when (s.tabs.getOrNull(pager.currentPage)) {
+            HomeTab.LATEST -> if (s.latest.data == null) entry.scope.load(s.latest) { api.latest() }
+            HomeTab.NODES -> if (s.nodes.data == null) entry.scope.load(s.nodes) { api.allNodes() }
+            else -> Unit
         }
     }
     val scope = rememberCoroutineScope()
-    val titles = listOf("最热", "最新", "节点")
+    val title = s.tabs.getOrNull(pager.currentPage)?.label ?: "V2EX"
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             contentWindowInsets = WindowInsets(0),
             topBar = {
                 TopAppBar(
-                    title = {
-                        Text(titles.getOrElse(s.pager.currentPage) { "V2EX" }, fontWeight = FontWeight.SemiBold)
-                    },
+                    title = { Text(title, fontWeight = FontWeight.SemiBold) },
                     actions = {
                         IconButton(onClick = { nav.push(Route.Search) }) { Icon(Icons.Outlined.Search, "搜索") }
-                        IconButton(onClick = { nav.push(Route.Library) }) { Icon(Icons.Outlined.Bookmarks, "收藏与历史") }
+                        if (HomeTab.LIBRARY !in s.tabs) {
+                            IconButton(onClick = { nav.push(Route.Library) }) { Icon(Icons.Outlined.Bookmarks, "收藏与历史") }
+                        }
                         if (nav.prefs.token != null) IconButton(onClick = { nav.push(Route.Notices) }) {
                             BadgedIcon(nav.noticeCount) { Icon(Icons.Outlined.Notifications, "提醒") }
                         }
@@ -102,36 +114,48 @@ fun HomeScreen(nav: Navigator, entry: Entry) {
             },
         ) { pad ->
             HorizontalPager(
-                state = s.pager,
+                state = pager,
                 modifier = Modifier.padding(pad).fillMaxSize().hazeSource(s.haze),
                 beyondViewportPageCount = 1,
+                key = { s.tabs.getOrNull(it)?.id ?: it },
             ) { page ->
-                when (page) {
-                    0 -> TopicListPane(s.hot, s.lists[0], nav,
+                when (s.tabs.getOrNull(page)) {
+                    HomeTab.HOT -> TopicListPane(
+                        s.hot, s.lists[0], nav, userSet, nodeSet,
                         { entry.scope.load(s.hot, true) { api.hot(force = true) } },
-                        { entry.scope.load(s.hot) { api.hot() } })
-                    1 -> TopicListPane(s.latest, s.lists[1], nav,
+                        { entry.scope.load(s.hot) { api.hot() } },
+                    )
+                    HomeTab.LATEST -> TopicListPane(
+                        s.latest, s.lists[1], nav, userSet, nodeSet,
                         { entry.scope.load(s.latest, true) { api.latest(force = true) } },
-                        { entry.scope.load(s.latest) { api.latest() } })
-                    else -> NodesPane(s, nav) { entry.scope.load(s.nodes, true) { api.allNodes(force = true) } }
+                        { entry.scope.load(s.latest) { api.latest() } },
+                    )
+                    HomeTab.NODES -> NodesPane(s, nav, nodeSet) {
+                        entry.scope.load(s.nodes, true) { api.allNodes(force = true) }
+                    }
+                    HomeTab.LIBRARY -> HomeLibraryPane(nav, userSet, nodeSet)
+                    null -> CenterMessage("未知标签")
                 }
             }
         }
         FloatingBottomBar(
-            selected = s.pager.currentPage,
+            tabs = s.tabs,
+            selected = pager.currentPage.coerceIn(0, (s.tabs.size - 1).coerceAtLeast(0)),
             haze = s.haze,
-            onSelect = { i -> scope.launch { s.pager.animateScrollToPage(i) } },
+            onSelect = { i -> scope.launch { pager.animateScrollToPage(i) } },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }
 
-/**
- * 液态玻璃底栏：API 31+ 对背后内容做实时模糊（Haze / RenderEffect），
- * 旧系统自动退化为半透明磨砂色；再叠一层顶部高光和渐变描边，模拟玻璃边缘的反光。
- */
 @Composable
-fun FloatingBottomBar(selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, haze: HazeState? = null) {
+fun FloatingBottomBar(
+    tabs: List<HomeTab>,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    haze: HazeState? = null,
+) {
     val cs = MaterialTheme.colorScheme
     val dark = cs.surface.luminance() < 0.5f
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -151,14 +175,12 @@ fun FloatingBottomBar(selected: Int, onSelect: (Int) -> Unit, modifier: Modifier
             .shadow(16.dp, shape, ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
             .clip(shape)
             .then(glassModifier)
-            // 顶部柔光：模拟玻璃表面的镜面反射
             .background(
                 Brush.verticalGradient(
                     0f to Color.White.copy(alpha = if (dark) 0.10f else 0.35f),
                     0.45f to Color.White.copy(alpha = 0f),
                 ),
             )
-            // 渐变描边：上缘亮、下缘淡，像玻璃边缘折射的光
             .border(
                 1.dp,
                 Brush.verticalGradient(
@@ -176,12 +198,13 @@ fun FloatingBottomBar(selected: Int, onSelect: (Int) -> Unit, modifier: Modifier
             windowInsets = WindowInsets(0),
             modifier = Modifier.height(64.dp),
         ) {
-            Destinations.forEachIndexed { i, d ->
+            tabs.forEachIndexed { i, tab ->
+                val d = destFor(tab)
                 NavigationBarItem(
                     selected = selected == i,
                     onClick = { onSelect(i) },
-                    icon = { Icon(if (selected == i) d.selected else d.unselected, contentDescription = d.label) },
-                    label = { Text(d.label) },
+                    icon = { Icon(if (selected == i) d.selected else d.unselected, contentDescription = tab.label) },
+                    label = { Text(tab.label) },
                     alwaysShowLabel = true,
                     colors = NavigationBarItemDefaults.colors(indicatorColor = cs.secondaryContainer.copy(alpha = 0.85f)),
                 )
@@ -194,15 +217,20 @@ fun FloatingBottomBar(selected: Int, onSelect: (Int) -> Unit, modifier: Modifier
 @Composable
 fun TopicListPane(
     l: Loadable<List<Topic>>, state: LazyListState, nav: Navigator,
+    blockedUsers: Set<String>, blockedNodes: Set<String>,
     onRefresh: () -> Unit, onRetry: () -> Unit,
 ) {
-    val data = l.data
+    val data = l.data?.filterBlocked(blockedUsers, blockedNodes)
     when {
-        data == null && l.error != null -> CenterMessage(l.error!!, "重试", onRetry)
-        data == null -> Loading()
+        l.data == null && l.error != null -> CenterMessage(l.error!!, "重试", onRetry)
+        l.data == null -> Loading()
         else -> PullToRefreshBox(isRefreshing = l.refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
-            TopicList(data, state, onTopic = { nav.push(Route.TopicR(it.id, it)) }, onMember = { nav.push(Route.MemberR(it)) },
-                showThumb = nav.prefs.loadImages)
+            TopicList(
+                data ?: emptyList(), state,
+                onTopic = { nav.push(Route.TopicR(it.id, it)) },
+                onMember = { nav.push(Route.MemberR(it)) },
+                showThumb = nav.prefs.loadImages,
+            )
         }
     }
 }
@@ -231,15 +259,15 @@ fun TopicList(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NodesPane(s: HomeState, nav: Navigator, onRefresh: () -> Unit) {
-    val all = s.nodes.data
+fun NodesPane(s: HomeState, nav: Navigator, blockedNodes: Set<String>, onRefresh: () -> Unit) {
+    val all = s.nodes.data?.filterBlockedNodes(blockedNodes)
     when {
-        all == null && s.nodes.error != null -> CenterMessage(s.nodes.error!!, "重试", onRefresh)
-        all == null -> Loading()
+        s.nodes.data == null && s.nodes.error != null -> CenterMessage(s.nodes.error!!, "重试", onRefresh)
+        s.nodes.data == null -> Loading()
         else -> {
             val q = s.query.trim()
             val shown = remember(all, q) {
-                val sorted = all.sortedByDescending { it.topics }
+                val sorted = (all ?: emptyList()).sortedByDescending { it.topics }
                 if (q.isEmpty()) sorted else sorted.filter { it.title.contains(q, true) || it.name.contains(q, true) }
             }
             PullToRefreshBox(isRefreshing = s.nodes.refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
@@ -268,5 +296,22 @@ fun NodesPane(s: HomeState, nav: Navigator, onRefresh: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun HomeLibraryPane(nav: Navigator, blockedUsers: Set<String>, blockedNodes: Set<String>) {
+    val topics by nav.dao.topicBookmarks().collectAsState(emptyList())
+    val filtered = remember(topics, blockedUsers, blockedNodes) {
+        topics.map { it.toTopic() }.filterBlocked(blockedUsers, blockedNodes)
+    }
+    Column(Modifier.fillMaxSize()) {
+        TextButton(onClick = { nav.push(Route.Library) }, Modifier.padding(horizontal = 8.dp)) {
+            Text("管理收藏与历史")
+        }
+        TopicList(
+            filtered, onTopic = { nav.push(Route.TopicR(it.id, it)) },
+            onMember = { nav.push(Route.MemberR(it)) }, showThumb = nav.prefs.loadImages,
+        )
     }
 }

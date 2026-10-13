@@ -41,6 +41,21 @@ data class NodeBookmark(
     val savedAt: Long = System.currentTimeMillis(),
 )
 
+@Entity(tableName = "reading_pos")
+data class ReadingPos(
+    @PrimaryKey val topicId: Long,
+    val floor: Int = 0,
+    val listIndex: Int = 0,
+    val offset: Int = 0,
+    val updatedAt: Long = System.currentTimeMillis(),
+)
+
+@Entity(tableName = "blocked_users")
+data class BlockedUser(@PrimaryKey val username: String, val blockedAt: Long = System.currentTimeMillis())
+
+@Entity(tableName = "blocked_nodes")
+data class BlockedNode(@PrimaryKey val name: String, val title: String = "", val blockedAt: Long = System.currentTimeMillis())
+
 @Dao
 interface LocalDao {
     @Query("SELECT * FROM history ORDER BY viewedAt DESC LIMIT :limit")
@@ -96,15 +111,53 @@ interface LocalDao {
 
     @Query("SELECT * FROM topic_bookmarks WHERE title LIKE '%' || :q || '%' OR member LIKE '%' || :q || '%' OR nodeTitle LIKE '%' || :q || '%' LIMIT 50")
     suspend fun searchBookmarks(q: String): List<TopicBookmark>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveReadingPos(pos: ReadingPos)
+
+    @Query("SELECT * FROM reading_pos WHERE topicId = :id")
+    suspend fun readingPos(id: Long): ReadingPos?
+
+    @Query("DELETE FROM reading_pos WHERE topicId = :id")
+    suspend fun clearReadingPos(id: Long)
+
+    @Query("SELECT username FROM blocked_users ORDER BY blockedAt DESC")
+    fun blockedUsers(): Flow<List<String>>
+
+    @Query("SELECT username FROM blocked_users")
+    suspend fun blockedUsersOnce(): List<String>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun blockUser(u: BlockedUser)
+
+    @Query("DELETE FROM blocked_users WHERE username = :username")
+    suspend fun unblockUser(username: String)
+
+    @Query("SELECT * FROM blocked_nodes ORDER BY blockedAt DESC")
+    fun blockedNodes(): Flow<List<BlockedNode>>
+
+    @Query("SELECT name FROM blocked_nodes")
+    suspend fun blockedNodeNamesOnce(): List<String>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun blockNode(n: BlockedNode)
+
+    @Query("DELETE FROM blocked_nodes WHERE name = :name")
+    suspend fun unblockNode(name: String)
 }
 
-@Database(entities = [HistoryRow::class, TopicBookmark::class, NodeBookmark::class], version = 1, exportSchema = false)
+@Database(
+    entities = [HistoryRow::class, TopicBookmark::class, NodeBookmark::class, ReadingPos::class, BlockedUser::class, BlockedNode::class],
+    version = 2, exportSchema = false,
+)
 abstract class AppDb : RoomDatabase() {
     abstract fun dao(): LocalDao
     companion object {
         @Volatile private var inst: AppDb? = null
         fun get(ctx: Context): AppDb = inst ?: synchronized(this) {
-            inst ?: Room.databaseBuilder(ctx.applicationContext, AppDb::class.java, "v2ex.db").build().also { inst = it }
+            inst ?: Room.databaseBuilder(ctx.applicationContext, AppDb::class.java, "v2ex.db")
+                .fallbackToDestructiveMigration(true)
+                .build().also { inst = it }
         }
     }
 }
@@ -125,7 +178,6 @@ fun TopicBookmark.toTopic() = Topic(id, title, "", replies,
     Member(member, avatar).takeIf { member.isNotEmpty() },
     Node(nodeName, nodeTitle).takeIf { nodeName.isNotEmpty() }, thumb = thumb)
 
-/** 本地收藏 / 历史 JSON 备份 */
 fun exportBackup(topics: List<TopicBookmark>, nodes: List<NodeBookmark>, history: List<HistoryRow>): String {
     fun t(x: TopicBookmark) = JSONObject().put("id", x.id).put("title", x.title).put("member", x.member)
         .put("avatar", x.avatar).put("nodeName", x.nodeName).put("nodeTitle", x.nodeTitle)
@@ -175,3 +227,10 @@ suspend fun importBackup(dao: LocalDao, json: String): Int {
     }
     return n
 }
+
+fun List<Topic>.filterBlocked(users: Set<String>, nodes: Set<String>) =
+    filter { t ->
+        t.member?.username !in users && (t.node?.name ?: "") !in nodes
+    }
+
+fun List<Node>.filterBlockedNodes(nodes: Set<String>) = filter { it.name !in nodes }

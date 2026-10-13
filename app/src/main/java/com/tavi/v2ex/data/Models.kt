@@ -56,7 +56,7 @@ data class Notice(
     val created: Long,
 )
 
-class ApiException(message: String, val code: Int = 0) : Exception(message)
+class ApiException(message: String, val code: Int = 0, val retryable: Boolean = false) : Exception(message)
 
 internal fun fixUrl(u: String?): String = when {
     u.isNullOrBlank() -> ""

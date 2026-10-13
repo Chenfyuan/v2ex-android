@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.tavi.v2ex.data.Reply
 import com.tavi.v2ex.data.Topic
 import com.tavi.v2ex.data.toBookmark
+import com.tavi.v2ex.data.ReadingPos
 import com.tavi.v2ex.data.toHistory
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -38,6 +39,7 @@ class TopicState(preview: Topic?) {
     var onlyOp by mutableStateOf(false)
     var bookmarked by mutableStateOf(false)
     var pendingFloor by mutableStateOf<Int?>(null)
+    var restoreIndex by mutableIntStateOf(-1)
     companion object { const val PAGE = 50 }
 }
 
@@ -55,20 +57,54 @@ fun TopicScreen(nav: Navigator, entry: Entry, id: Long, preview: Topic?, jumpFlo
         entry.scope.load(s.replies) { api.replies(id, force) }
     }
     LaunchedEffect(Unit) {
+        if (s.pendingFloor == null) {
+            dao.readingPos(id)?.let { pos ->
+                if (pos.floor > 0) s.pendingFloor = pos.floor
+                else if (pos.listIndex > 0) s.restoreIndex = pos.listIndex
+            }
+        }
         if (s.replies.data == null) refresh(false)
         dao.isTopicBookmarked(id).collectLatest { s.bookmarked = it }
     }
+    DisposableEffect(id) {
+        onDispose {
+            val idx = s.list.firstVisibleItemIndex
+            val off = s.list.firstVisibleItemScrollOffset
+            // index 0 是正文头；回复从 1 起
+            val floor = when {
+                idx <= 0 -> 0
+                else -> {
+                    val replies = s.replies.data
+                    val filtered = if (s.onlyOp) replies?.filter { it.member?.username == s.topic.data?.member?.username } else replies
+                    filtered?.getOrNull((idx - 1).coerceAtLeast(0))?.floor ?: 0
+                }
+            }
+            entry.scope.launch {
+                dao.saveReadingPos(ReadingPos(id, floor, idx, off))
+            }
+        }
+    }
     // 跳楼：确保页数够，再滚到对应 item
-    LaunchedEffect(s.replies.data, s.pendingFloor, s.onlyOp) {
-        val floor = s.pendingFloor ?: return@LaunchedEffect
+    LaunchedEffect(s.replies.data, s.pendingFloor, s.onlyOp, s.restoreIndex) {
         val all = s.replies.data ?: return@LaunchedEffect
         val filtered = if (s.onlyOp) all.filter { it.member?.username == s.topic.data?.member?.username } else all
-        val idx = filtered.indexOfFirst { it.floor == floor }
-        if (idx < 0) { s.pendingFloor = null; return@LaunchedEffect }
-        while (s.shown <= idx + 1) s.shown += TopicState.PAGE
-        // head 占 1 个 item
-        s.list.animateScrollToItem(idx + 1)
-        s.pendingFloor = null
+        when {
+            s.pendingFloor != null -> {
+                val floor = s.pendingFloor!!
+                val idx = filtered.indexOfFirst { it.floor == floor }
+                if (idx < 0) { s.pendingFloor = null; return@LaunchedEffect }
+                while (s.shown <= idx + 1) s.shown += TopicState.PAGE
+                s.list.animateScrollToItem(idx + 1)
+                s.pendingFloor = null
+                s.restoreIndex = -1
+            }
+            s.restoreIndex >= 0 -> {
+                val idx = s.restoreIndex
+                while (s.shown <= idx) s.shown += TopicState.PAGE
+                s.list.scrollToItem(idx.coerceAtMost(filtered.size))
+                s.restoreIndex = -1
+            }
+        }
     }
     val url = "https://www.v2ex.com/t/$id"
     val t = s.topic.data

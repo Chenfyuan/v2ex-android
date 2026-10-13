@@ -17,8 +17,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material3.*
@@ -99,6 +102,12 @@ fun NodeScreen(nav: Navigator, entry: Entry, name: String, title: String) {
                     if (bookmarked) nav.dao.removeNode(name) else nav.dao.saveNode(n.toBookmark())
                 }
             }) { Icon(if (bookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, "收藏节点") }
+            IconButton(onClick = {
+                scope.launch {
+                    nav.dao.blockNode(BlockedNode(name, s.info.data?.title ?: title))
+                    nav.pop()
+                }
+            }) { Icon(Icons.Outlined.Block, "屏蔽节点") }
             IconButton(onClick = { nav.openExternal("https://www.v2ex.com/go/$name") }) { Icon(Icons.Outlined.OpenInBrowser, "在浏览器打开") }
         }
     }) { pad ->
@@ -155,6 +164,10 @@ fun MemberScreen(nav: Navigator, entry: Entry, name: String) {
     }
     Scaffold(topBar = {
         BackBar(name, nav) {
+            val scope = rememberCoroutineScope()
+            IconButton(onClick = {
+                scope.launch { nav.dao.blockUser(BlockedUser(name)); nav.pop() }
+            }) { Icon(Icons.Outlined.Block, "屏蔽用户") }
             IconButton(onClick = { nav.openExternal("https://www.v2ex.com/member/$name") }) { Icon(Icons.Outlined.OpenInBrowser, "在浏览器打开") }
         }
     }) { pad ->
@@ -352,6 +365,71 @@ fun SettingsScreen(nav: Navigator, entry: Entry) {
             SwitchRow("自动加载图片", "关闭后点按才加载，省流量", p.loadImages, p::updateImages)
 
 
+
+            SectionTitle("首页底栏")
+            Text("可调整顺序、默认打开的标签，也可把「收藏」放到底栏。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val order = remember(p.homeOrder) { p.homeTabs().toMutableStateList() }
+            order.forEachIndexed { i, tab ->
+                ListItem(
+                    headlineContent = { Text(tab.label) },
+                    supportingContent = {
+                        if (p.defaultTab == tab.id) Text("默认打开", color = MaterialTheme.colorScheme.primary)
+                    },
+                    trailingContent = {
+                        Row {
+                            IconButton(onClick = {
+                                if (i > 0) {
+                                    order.add(i - 1, order.removeAt(i))
+                                    p.updateHomeOrder(order.toList())
+                                }
+                            }, enabled = i > 0) { Icon(Icons.Outlined.KeyboardArrowUp, "上移") }
+                            IconButton(onClick = {
+                                if (i < order.lastIndex) {
+                                    order.add(i + 1, order.removeAt(i))
+                                    p.updateHomeOrder(order.toList())
+                                }
+                            }, enabled = i < order.lastIndex) { Icon(Icons.Outlined.KeyboardArrowDown, "下移") }
+                            TextButton(onClick = { p.updateDefaultTab(tab.id) }) { Text("默认") }
+                        }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                )
+            }
+            val extras = HomeTab.entries.filter { it !in order }
+            if (extras.isNotEmpty()) {
+                Text("添加到底栏", style = MaterialTheme.typography.labelLarge)
+                extras.forEach { tab ->
+                    AssistChip(onClick = {
+                        order.add(tab); p.updateHomeOrder(order.toList())
+                    }, label = { Text("+ ${tab.label}") }, modifier = Modifier.padding(end = 8.dp, top = 4.dp))
+                }
+            }
+            if (order.size > 2) {
+                TextButton(onClick = {
+                    if (order.size > 2) {
+                        val rem = order.removeAt(order.lastIndex)
+                        p.updateHomeOrder(order.toList())
+                    }
+                }) { Text("移除最后一项") }
+            }
+
+            SectionTitle("屏蔽")
+            Text("被屏蔽的用户和节点不会出现在最热、最新、节点列表和收藏里。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val bu by nav.dao.blockedUsers().collectAsState(emptyList())
+            val bn by nav.dao.blockedNodes().collectAsState(emptyList())
+            if (bu.isEmpty() && bn.isEmpty()) Text("还没有屏蔽", style = MaterialTheme.typography.bodySmall)
+            bu.forEach { u ->
+                ListItem(headlineContent = { Text("@$u") }, trailingContent = {
+                    TextButton(onClick = { entry.scope.launch { nav.dao.unblockUser(u) } }) { Text("取消屏蔽") }
+                }, colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent))
+            }
+            bn.forEach { n ->
+                ListItem(headlineContent = { Text(n.title.ifBlank { n.name }) }, supportingContent = { Text(n.name) },
+                    trailingContent = {
+                        TextButton(onClick = { entry.scope.launch { nav.dao.unblockNode(n.name) } }) { Text("取消屏蔽") }
+                    }, colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent))
+            }
+
             SectionTitle("阅读")
             Text("正文字号", style = MaterialTheme.typography.labelLarge)
             Slider(value = p.fontScale, onValueChange = p::updateFontScale, valueRange = 0.85f..1.4f, steps = 10)
@@ -377,7 +455,7 @@ fun SettingsScreen(nav: Navigator, entry: Entry) {
             cacheMsg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
             SectionTitle("关于")
-            Text("V2 阅读 0.2.1 · 非官方 V2EX 客户端，数据来自 V2EX 公开接口。", style = MaterialTheme.typography.bodySmall,
+            Text("V2 阅读 0.3.0 · 非官方 V2EX 客户端，数据来自 V2EX 公开接口。", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(32.dp))
         }
