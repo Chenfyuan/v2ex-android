@@ -230,6 +230,9 @@ fun TopicListPane(
                 onTopic = { nav.push(Route.TopicR(it.id, it)) },
                 onMember = { nav.push(Route.MemberR(it)) },
                 showThumb = nav.prefs.loadImages,
+                footer = {
+                    ListEndFooter("已显示全部 ${data?.size ?: 0} 条。V2EX 接口不支持继续翻页，下拉可刷新获取最新", "刷新", onRefresh)
+                },
             )
         }
     }
@@ -242,6 +245,7 @@ fun TopicList(
     showThumb: Boolean = false,
     header: (@Composable () -> Unit)? = null,
     bottomSpace: Boolean = true,
+    footer: (@Composable () -> Unit)? = null,
 ) {
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -254,6 +258,15 @@ fun TopicList(
             HorizontalDivider(Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
         }
         if (topics.isEmpty()) item { Box(Modifier.fillParentMaxHeight(0.6f)) { CenterMessage("这里还没有主题") } }
+        else if (footer != null) item(key = "footer") { footer() }
+    }
+}
+
+@Composable
+fun ListEndFooter(text: String, action: String? = null, onAction: () -> Unit = {}) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (action != null) TextButton(onClick = onAction) { Text(action) }
     }
 }
 

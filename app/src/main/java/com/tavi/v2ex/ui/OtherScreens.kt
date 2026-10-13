@@ -61,6 +61,7 @@ class NodeState {
     var page by mutableIntStateOf(1)
     var hasMore by mutableStateOf(false)
     var loadingMore by mutableStateOf(false)
+    var moreError by mutableStateOf<String?>(null)
     val list = LazyListState()
 }
 
@@ -79,13 +80,13 @@ fun NodeScreen(nav: Navigator, entry: Entry, name: String, title: String) {
     val atEnd by remember { derivedStateOf {
         (s.list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) >= s.list.layoutInfo.totalItemsCount - 3
     } }
-    LaunchedEffect(atEnd) {
-        if (atEnd && s.hasMore && !s.loadingMore && s.topics.data != null) {
+    LaunchedEffect(atEnd, s.page, s.loadingMore, s.hasMore, s.moreError) {
+        if (atEnd && s.hasMore && !s.loadingMore && s.moreError == null && s.topics.data != null) {
             s.loadingMore = true
             entry.scope.launch {
                 runCatching { api.nodeTopics(name, s.page + 1) }.onSuccess { (l, more) ->
                     s.page += 1; s.hasMore = more; s.topics.data = (s.topics.data ?: emptyList()) + l.filter { n -> s.topics.data?.none { it.id == n.id } != false }
-                }.onFailure { s.hasMore = false }
+                }.onFailure { s.moreError = it.message ?: "加载失败" }
                 s.loadingMore = false
             }
         }
@@ -118,6 +119,15 @@ fun NodeScreen(nav: Navigator, entry: Entry, name: String, title: String) {
                 data == null -> Loading()
                 else -> PullToRefreshBox(isRefreshing = s.topics.refreshing, onRefresh = { refresh(true) }) {
                     TopicList(data, s.list, { nav.push(Route.TopicR(it.id, it)) }, { nav.push(Route.MemberR(it)) }, showNode = false, showThumb = nav.prefs.loadImages, bottomSpace = false,
+                        footer = {
+                            when {
+                                s.loadingMore -> Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
+                                s.moreError != null -> ListEndFooter(s.moreError!!, "重试") { s.moreError = null }
+                                s.hasMore -> ListEndFooter("继续上滑加载更多")
+                                nav.prefs.token == null -> ListEndFooter("未填令牌只能看最新 10 条。在设置里填写个人访问令牌后可继续翻页", "去设置") { nav.push(Route.Settings) }
+                                else -> ListEndFooter("已经到底了，下拉可刷新", "刷新") { refresh(true) }
+                            }
+                        },
                         header = {
                             Column(Modifier.padding(16.dp, 8.dp)) {
                                 if (info != null) {
@@ -455,7 +465,7 @@ fun SettingsScreen(nav: Navigator, entry: Entry) {
             cacheMsg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
             SectionTitle("关于")
-            Text("V2 阅读 0.3.0 · 非官方 V2EX 客户端，数据来自 V2EX 公开接口。", style = MaterialTheme.typography.bodySmall,
+            Text("V2 阅读 0.3.1 · 非官方 V2EX 客户端，数据来自 V2EX 公开接口。", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(32.dp))
         }

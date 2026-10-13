@@ -153,7 +153,7 @@ class V2exApi(private val cacheDir: File, private val token: () -> String?) {
         if (token() != null) {
             val arr = v2Result(get("/api/v2/nodes/${enc(name)}/topics?p=$page", 2 * MIN, auth = true, force = force, staleMs = DAY)) as? JSONArray
             val list = arr?.objects()?.map(::parseTopic) ?: emptyList()
-            return list to (list.size >= 20)
+            return list to list.isNotEmpty()
         }
         val list = JSONArray(get("/api/topics/show.json?node_name=${enc(name)}", 2 * MIN, force = force, staleMs = DAY)).objects().map(::parseTopic)
         return list to false
