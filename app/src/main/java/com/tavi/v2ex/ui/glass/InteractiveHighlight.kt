@@ -22,7 +22,8 @@ import kotlinx.coroutines.launch
 
 class InteractiveHighlight(
     val animationScope: CoroutineScope,
-    val position: (size: Size, offset: Offset) -> Offset = { _, offset -> offset }
+    val position: (size: Size, offset: Offset) -> Offset = { _, offset -> offset },
+    val enabled: Boolean = true,
 ) {
 
     private val pressProgressAnimationSpec =
@@ -40,7 +41,7 @@ class InteractiveHighlight(
     val offset: Offset get() = positionAnimation.value - startPosition
 
     private val shader =
-        if (isRuntimeShaderSupported()) {
+        if (enabled && isRuntimeShaderSupported()) {
             RuntimeShader(
                 """
 uniform float2 size;

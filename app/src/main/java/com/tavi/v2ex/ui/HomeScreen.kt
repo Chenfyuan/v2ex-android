@@ -274,6 +274,9 @@ fun FloatingBottomBar(
     }
 }
 
+/** 截图测试（Robolectric 不支持 AGSL）时关闭玻璃着色器，走降级外观 */
+val LocalLiquidGlassEnabled = staticCompositionLocalOf { true }
+
 private val LocalTabScale = staticCompositionLocalOf { { 1f } }
 
 @Composable
@@ -303,10 +306,11 @@ private fun LiquidTabs(
 ) {
     val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val accent = if (dark) Color(0xFF0091FF) else Color(0xFF0088FF)
-    val supported = isRenderEffectSupported()
+    val supported = isRenderEffectSupported() && LocalLiquidGlassEnabled.current
     val container = if (dark) Color(0xFF121212).copy(if (supported) 0.4f else 0.92f)
     else Color(0xFFFAFAFA).copy(if (supported) 0.4f else 0.94f)
     val tabsBackdrop = rememberLayerBackdrop()
+    val combined = rememberCombinedBackdrop(backdrop, tabsBackdrop)
 
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
         val density = LocalDensity.current
@@ -358,7 +362,7 @@ private fun LiquidTabs(
             }
         }
         val highlight = remember(animationScope, damped) {
-            InteractiveHighlight(animationScope = animationScope, position = { size, _ ->
+            InteractiveHighlight(animationScope = animationScope, enabled = supported, position = { size, _ ->
                 Offset(
                     if (isLtr) (damped.value + 0.5f) * tabWidth + panelOffset
                     else size.width - (damped.value + 0.5f) * tabWidth + panelOffset,
@@ -370,17 +374,19 @@ private fun LiquidTabs(
         Row(
             Modifier
                 .graphicsLayer { translationX = panelOffset }
-                .drawBackdrop(
+                .glassOr(supported, container) {
+                    drawBackdrop(
                     backdrop = backdrop,
                     shape = { Capsule() },
-                    effects = { vibrancy(); blur(8.dp.toPx()); lens(24.dp.toPx(), 24.dp.toPx()) },
+                    effects = { if (supported) { vibrancy(); blur(8.dp.toPx()); lens(24.dp.toPx(), 24.dp.toPx()) } },
                     layerBlock = {
                         val s = lerp(1f, 1f + 16.dp.toPx() / size.width, damped.pressProgress)
                         scaleX = s; scaleY = s
                     },
+                    highlight = { if (supported) Highlight.Default else null },
                     shadow = { Shadow(alpha = if (dark) 0.6f else 0.25f) },
                     onDrawSurface = { drawRect(container) },
-                )
+                ) }
                 .then(highlight.modifier)
                 .height(64.dp)
                 .fillMaxWidth()
@@ -394,18 +400,19 @@ private fun LiquidTabs(
                 Modifier
                     .clearAndSetSemantics {}
                     .alpha(0f)
-                    .layerBackdrop(tabsBackdrop)
+                    .then(if (supported) Modifier.layerBackdrop(tabsBackdrop) else Modifier)
                     .graphicsLayer { translationX = panelOffset }
-                    .drawBackdrop(
+                    .glassOr(supported, container) {
+                    drawBackdrop(
                         backdrop = backdrop,
                         shape = { Capsule() },
                         effects = {
                             val p = damped.pressProgress
-                            vibrancy(); blur(8.dp.toPx()); lens(24.dp.toPx() * p, 24.dp.toPx() * p)
+                            if (supported) { vibrancy(); blur(8.dp.toPx()); lens(24.dp.toPx() * p, 24.dp.toPx() * p) }
                         },
-                        highlight = { Highlight.Default.copy(alpha = damped.pressProgress) },
+                        highlight = { if (supported) Highlight.Default.copy(alpha = damped.pressProgress) else null },
                         onDrawSurface = { drawRect(container) },
-                    )
+                    ) }
                     .then(highlight.modifier)
                     .height(56.dp)
                     .fillMaxWidth()
@@ -425,14 +432,15 @@ private fun LiquidTabs(
                 }
                 .then(highlight.gestureModifier)
                 .then(damped.modifier)
-                .drawBackdrop(
-                    backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
+                .glassOr(supported, accent.copy(alpha = if (dark) 0.28f else 0.16f)) {
+                    drawBackdrop(
+                    backdrop = combined,
                     shape = { Capsule() },
                     effects = {
                         val p = damped.pressProgress
-                        lens(10.dp.toPx() * p, 14.dp.toPx() * p, chromaticAberration = true)
+                        if (supported) lens(10.dp.toPx() * p, 14.dp.toPx() * p, chromaticAberration = true)
                     },
-                    highlight = { Highlight.Default.copy(alpha = damped.pressProgress) },
+                    highlight = { if (supported) Highlight.Default.copy(alpha = damped.pressProgress) else null },
                     shadow = { Shadow(alpha = damped.pressProgress) },
                     innerShadow = { InnerShadow(radius = 8.dp * damped.pressProgress, alpha = damped.pressProgress) },
                     layerBlock = {
@@ -446,7 +454,7 @@ private fun LiquidTabs(
                         drawRect(if (dark) Color.White.copy(0.1f) else Color.Black.copy(0.1f), alpha = 1f - p)
                         drawRect(Color.Black.copy(alpha = 0.03f * p))
                     },
-                )
+                ) }
                 .height(56.dp)
                 .fillMaxWidth(1f / tabsCount),
         )
@@ -595,3 +603,8 @@ class PagingUi(
     val hasMore: Boolean, val loading: Boolean, val error: String?,
     val onMore: () -> Unit, val onRetry: () -> Unit,
 )
+
+
+/** 支持玻璃时用 backdrop 绘制；否则（Android 12 以下 / 截图测试）退化为半透明实色胶囊 */
+private fun Modifier.glassOr(supported: Boolean, fallback: Color, glass: Modifier.() -> Modifier): Modifier =
+    if (supported) glass() else clip(Capsule()).background(fallback)
